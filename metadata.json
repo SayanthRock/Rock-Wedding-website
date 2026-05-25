@@ -1,0 +1,10 @@
+{
+  "name": "E. Moments",
+  "description": "Elegant wedding photography gallery with intelligent photo discovery, secure sharing, and beautifully curated collections.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

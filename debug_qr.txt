@@ -1,0 +1,2 @@
+                                <QRCode id="qr-protocol" value={user?.uid || "eternal-moments"} size={40} />
+                               onClick={() => downloadQRCode("qr-protocol", "protocol")}
