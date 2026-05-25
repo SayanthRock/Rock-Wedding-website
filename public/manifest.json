@@ -1,17 +1,20 @@
 {
   "name": "E. Moments",
   "short_name": "E. Moments",
-  "description": "AI-powered wedding photography portal with face verification.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#1c1917",
+  "theme_color": "#1c1917",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "https://images.unsplash.com/photo-1519741497674-9c1afefd796f?auto=format&fit=crop&q=80&w=192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1519741497674-9c1afefd796f?auto=format&fit=crop&q=80&w=512",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

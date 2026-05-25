@@ -313,6 +313,26 @@ export default function App() {
     testConnection();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wId = params.get('v') || params.get('wedding');
+    if (wId) {
+      const fetchPublicWedding = async () => {
+        try {
+          const docSnap = await getDoc(doc(db, "weddings", wId));
+          if (docSnap.exists()) {
+            setCurrentWedding({ id: docSnap.id, ...docSnap.data() } as Wedding);
+            setStep("gallery");
+            showNotification(`Accessing ${docSnap.data().name}`);
+          }
+        } catch (e) {
+          console.error("Link invalid or private", e);
+        }
+      };
+      fetchPublicWedding();
+    }
+  }, []);
+
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [step, setStep] = useState<Step>("welcome");
   const [isDark, setIsDark] = useState(true);
@@ -385,7 +405,7 @@ export default function App() {
   const [cameraInitialMode, setCameraInitialMode] = useState<"photo" | "qr">("photo");
 
   const handleJoinWedding = async () => {
-    if (!joinId || !user) return;
+    if (!joinId) return;
     try {
       const docRef = doc(db, "weddings", joinId);
       const docSnap = await getDoc(docRef);
@@ -406,16 +426,18 @@ export default function App() {
   };
 
   const handleQRScanJoin = async (scannedData: string) => {
-    if (!user) return;
-    
     let targetId = scannedData;
     // Handle full URLs (e.g. from shared wedding link)
-    if (scannedData.includes('/v/')) {
+    if (scannedData.includes('?v=')) {
+      targetId = new URL(scannedData).searchParams.get('v') || scannedData;
+    } else if (scannedData.includes('/v/')) {
       targetId = scannedData.split('/v/').pop() || scannedData;
     }
     
-    // Remove any trailing slashes or parameters
-    targetId = targetId.split('?')[0].split('#')[0].replace(/\/$/, "");
+    // Remove any trailing slashes or parameters if we took it from /v/
+    if (!scannedData.includes('?v=')) {
+      targetId = targetId.split('?')[0].split('#')[0].replace(/\/$/, "");
+    }
 
     try {
       const docRef = doc(db, "weddings", targetId);
@@ -427,8 +449,6 @@ export default function App() {
         setShowCamera(false);
         showNotification(`Joined with "${wedding.name}"`);
       } else {
-        // Fallback: If it's a UID, we might want a different behavior
-        // But for "work from gallery", we expect wedding IDs
         showNotification("Unrecognized Wedding ID");
       }
     } catch (e) {
@@ -500,32 +520,31 @@ export default function App() {
     let unsubWeddings: (() => void) | null = null;
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        // Fetch ALL weddings for discovery
-        const q = query(collection(db, "weddings"));
-    try {
-      unsubWeddings = onSnapshot(q, 
+      
+      // Fetch public/all weddings regardless of auth for Discovery
+      const q = query(collection(db, "weddings"));
+      const unsubWeddings = onSnapshot(q, 
         (snapshot) => {
           setWeddings(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Wedding)));
         },
         (error) => {
-          handleFirestoreError(error, OperationType.GET, "weddings");
+          console.warn("Public wedding fetch limited", error);
         }
       );
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, "weddings");
-    }
-      } else {
-        if (unsubWeddings) unsubWeddings();
-        setWeddings([]);
-        setStep("welcome");
+
+      if (!u) {
+        // If not logged in and not currently viewing a wedding via URL link
+        if (!currentWedding) {
+          setStep("welcome");
+        }
       }
+      
+      return () => {
+        unsubWeddings();
+      };
     });
-    return () => {
-      unsubscribe();
-      if (unsubWeddings) unsubWeddings();
-    };
-  }, []);
+    return () => unsubscribe();
+  }, [currentWedding]);
 
   useEffect(() => {
     if (currentWedding) {
@@ -1983,9 +2002,9 @@ export default function App() {
                   className="px-10 py-7 rounded-[2.5rem] glass-morphism border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 hover:translate-y-[-2px] transition-all"
                 >
                   <div className="flex items-center gap-1">
-                    <User className="w-4 h-4 text-indigo-500" />
+                    <UserPlus className="w-4 h-4 text-indigo-500" />
                   </div>
-                  Sign In
+                  Enter Code
                 </button>
 
                 <button 
@@ -3315,10 +3334,27 @@ export default function App() {
                   </motion.div>
                 </div>
                 
-                {/* QR Access Code - New Section */}
+                  {/* QR Access Code - New Section */}
                 {currentWedding && (
                   <div className="flex flex-col gap-6 w-full max-w-md">
                      <div className="glass-dark rounded-[2.5rem] p-8 space-y-6 border border-white/10">
+                        {!user ? (
+                           <div className="space-y-6">
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.4em]">Guest Mode Active</p>
+                                <p className="text-xl font-serif italic text-white">Join the legacy.</p>
+                                <p className="text-[10px] text-white/60 leading-relaxed uppercase tracking-widest">Sign in to upload your own moments and participate in the curated collection.</p>
+                              </div>
+                              <button 
+                                onClick={() => signInWithGoogle()}
+                                className="w-full py-5 rounded-2xl bg-indigo-600 text-white font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 transition-all shadow-xl shadow-indigo-600/20"
+                              >
+                                <LogOut className="w-4 h-4 rotate-180" />
+                                Authenticate to Contribute
+                              </button>
+                           </div>
+                        ) : (
+                           <>
                         <div className="flex items-center justify-between">
                            <div className="space-y-1">
                               <p className="text-[10px] font-bold text-white uppercase tracking-[0.4em]">Entry Code</p>
@@ -3326,7 +3362,7 @@ export default function App() {
                            </div>
                            <div className="flex flex-col items-center gap-3">
                               <div className="w-16 h-16 bg-white p-2 rounded-2xl flex items-center justify-center shadow-2xl">
-                                 <QRCode id="qr-gallery-key" value={`https://eternal-moments.app/v/${currentWedding.id}`} size={48} />
+                                 <QRCode id="qr-gallery-key" value={`${window.location.origin}${window.location.pathname}?v=${currentWedding.id}`} size={48} />
                               </div>
                               <p className="text-[8px] font-mono text-white/40 uppercase">{currentWedding.id.slice(0, 12)}</p>
                               <button 
@@ -3371,6 +3407,8 @@ export default function App() {
                               </div>
                            </button>
                         </div>
+                        </>
+                        )}
                      </div>
                   </div>
                 )}
@@ -3446,7 +3484,7 @@ export default function App() {
                                <div className="flex items-center gap-4">
                                  <div className="flex flex-col items-center gap-2">
                                    <div className="w-16 h-16 rounded-2xl bg-stone-50 dark:bg-black p-2 flex items-center justify-center shadow-inner cursor-pointer" onClick={() => setShowShareModal(true)}>
-                                     <QRCode value={`https://eternal-moments.app/v/${currentWedding.id}`} size={48} />
+                                     <QRCode value={`${window.location.origin}${window.location.pathname}?v=${currentWedding.id}`} size={48} />
                                    </div>
                                    <p className="text-[8px] font-mono text-stone-400 dark:text-stone-600 uppercase">{currentWedding.id.slice(0, 12)}</p>
                                  </div>
@@ -3810,7 +3848,7 @@ export default function App() {
                               <div className="p-6 bg-white rounded-3xl shadow-xl shadow-stone-200 group relative">
                                 <QRCode 
                                   id="qr-share-magic"
-                                  value={`https://eternal-moments.app/v/${currentWedding.id}`}
+                                  value={`${window.location.origin}${window.location.pathname}?v=${currentWedding.id}`}
                                   size={160}
                                   bgColor="transparent"
                                   fgColor="#1c1917"
@@ -3842,15 +3880,15 @@ export default function App() {
                            <div className="h-[1px] w-full bg-stone-200/50" />
 
                            <div className="space-y-3">
-                             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">Gallery Direct Link</p>
+                              <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">Gallery Direct Link</p>
                              <div className="flex items-center justify-between gap-4">
                                <code className="flex-1 px-5 py-3 rounded-xl bg-white border border-stone-100 text-[10px] font-mono text-stone-500 overflow-hidden text-ellipsis whitespace-nowrap">
-                                 eternal-moments.app/v/{currentWedding.id.slice(0, 8)}
+                                 {window.location.host}?v={currentWedding.id.slice(0, 8)}...
                                </code>
                                <button 
                                  onClick={async () => {
                                    try {
-                                     await navigator.clipboard.writeText(`https://eternal-moments.app/v/${currentWedding.id}`);
+                                     await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?v=${currentWedding.id}`);
                                      setCopied(true);
                                      showNotification("Link copied to clipboard");
                                      setTimeout(() => setCopied(false), 2000);
@@ -3884,7 +3922,7 @@ export default function App() {
                         >
                           Done / Close
                         </button>
-                        <p className="text-[10px] text-stone-400 font-medium">Link is only accessible with your face verify token</p>
+                        <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest leading-relaxed">This link allows public viewing of the curated atmosphere. Face verification is for contributor-only actions.</p>
                       </div>
                     </motion.div>
                   </motion.div>

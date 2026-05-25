@@ -54,7 +54,7 @@ service cloud.firestore {
 
     // Weddings
     match /weddings/{weddingId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && isValidId(weddingId) && isValidWedding(incoming());
       allow update: if isOwner(existing().ownerId) && isValidWedding(incoming()) && 
                     incoming().diff(existing()).affectedKeys().hasOnly(['name', 'date', 'location', 'watermarkEnabled', 'sharingLimit', 'watermarkText', 'watermarkPosition', 'watermarkOpacity', 'watermarkBg', 'watermarkTextSize', 'liquidGlassEnabled', 'photoBlur', 'coverUrl', 'updatedAt']);
@@ -62,7 +62,7 @@ service cloud.firestore {
 
       // Photos Sub-collection
       match /photos/{photoId} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow create: if isSignedIn() && isValidId(photoId) && 
                       isValidPhoto(incoming()) && 
                       exists(/databases/$(database)/documents/weddings/$(weddingId));
