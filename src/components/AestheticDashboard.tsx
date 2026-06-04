@@ -55,7 +55,7 @@ export default function AestheticDashboard({
   const avatarUrl = user?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300";
 
   return (
-    <div className="space-y-8 animate-fade-in text-left max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 sm:space-y-8 animate-fade-in text-left max-w-5xl mx-auto pb-12 px-3 sm:px-4">
       
       {/* Top Greeting Node */}
       <div className="flex items-center justify-between gap-4">
@@ -73,7 +73,7 @@ export default function AestheticDashboard({
       </div>
 
       {/* Styled premium sand-themed Search and Filter Box */}
-      <div className="flex gap-2 bg-white dark:bg-stone-950 p-2.5 rounded-[1.8rem] border border-stone-100 dark:border-white/5 shadow-sm max-w-2xl">
+      <div className="flex gap-2 bg-white dark:bg-stone-950 p-1.5 sm:p-2.5 rounded-2xl sm:rounded-[1.8rem] border border-stone-100 dark:border-white/5 shadow-sm max-w-2xl">
         <div className="flex items-center gap-3 flex-1 px-3">
           <Search className="w-4 h-4 text-stone-400" />
           <input 
@@ -92,7 +92,7 @@ export default function AestheticDashboard({
 
       {/* Main Active Event banner carousel */}
       {activeWeddingForBanner && (
-        <div className="premier-card overflow-hidden relative group aspect-video md:aspect-[21/9] flex flex-col justify-end p-8 border border-stone-100/40 dark:border-white/5 shadow-2xl">
+        <div className="premier-card overflow-hidden relative group aspect-[4/3] xs:aspect-video md:aspect-[21/9] flex flex-col justify-end p-4 sm:p-8 border border-stone-100/40 dark:border-white/5 shadow-xl rounded-2xl md:rounded-[2.5rem]">
           <img 
             src={activeWeddingForBanner.coverUrl || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200"} 
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
@@ -157,45 +157,45 @@ export default function AestheticDashboard({
       <div className="space-y-3">
         <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">At a Glance</h4>
         
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="premier-card p-5 space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="premier-card p-4 sm:p-5 space-y-2 sm:space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5 rounded-2xl md:rounded-[2rem]">
             <LayoutGrid className="w-5 h-5 text-sand-primary" />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-widest text-stone-400">Total Events</p>
-              <h5 className="text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
+              <h5 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
                 {totalEvents > 0 ? totalEvents : 3}
               </h5>
               <p className="text-[9px] text-stone-400 mt-1 font-medium">All Time</p>
             </div>
           </div>
 
-          <div className="premier-card p-5 space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5">
+          <div className="premier-card p-4 sm:p-5 space-y-2 sm:space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5 rounded-2xl md:rounded-[2rem]">
             <Calendar className="w-5 h-5 text-sand-primary" />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-widest text-stone-400">Upcoming</p>
-              <h5 className="text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
+              <h5 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
                 {upcomingEventsCount > 0 ? upcomingEventsCount : 3}
               </h5>
               <p className="text-[9px] text-stone-400 mt-1 font-medium">Next 30 Days</p>
             </div>
           </div>
 
-          <div className="premier-card p-5 space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5">
+          <div className="premier-card p-4 sm:p-5 space-y-2 sm:space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5 rounded-2xl md:rounded-[2rem]">
             <ClipboardList className="w-5 h-5 text-sand-primary" />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-widest text-stone-400">Tasks Pending</p>
-              <h5 className="text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
+              <h5 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 dark:text-white mt-1">
                 {pendingTasksCount > 0 ? pendingTasksCount : 12}
               </h5>
               <p className="text-[9px] text-stone-400 mt-1 font-medium">To Do</p>
             </div>
           </div>
 
-          <div className="premier-card p-5 space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5">
+          <div className="premier-card p-4 sm:p-5 space-y-2 sm:space-y-3 bg-white/60 dark:bg-stone-900/40 hover:scale-[1.02] border border-stone-100/40 dark:border-white/5 rounded-2xl md:rounded-[2rem]">
             <IndianRupee className="w-5 h-5 text-sand-primary" />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-widest text-stone-400">Total Budget</p>
-              <h5 className="text-2xl font-serif font-mono font-bold text-stone-900 dark:text-white mt-1">
+              <h5 className="text-xl sm:text-2xl font-serif font-mono font-bold text-stone-900 dark:text-white mt-1">
                 {formatBudget(totalBudgetCost)}
               </h5>
               <p className="text-[9px] text-stone-400 mt-1 font-medium">All Events</p>
@@ -208,7 +208,7 @@ export default function AestheticDashboard({
       <div className="space-y-4">
         <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Quick Actions</h4>
         
-        <div className="grid grid-cols-5 gap-2 text-center">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-5 gap-3 pb-2 pt-1 text-center no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
           {[
             { label: "Create Event", icon: Plus, action: onCreateEventClick },
             { label: "Guest List", icon: Users, action: () => activeWeddingForBanner && onSelectEvent(activeWeddingForBanner) },
@@ -221,12 +221,12 @@ export default function AestheticDashboard({
               <button 
                 key={index} 
                 onClick={act.action}
-                className="flex flex-col items-center gap-2 group cursor-pointer focus:outline-none"
+                className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none shrink-0 min-w-[70px] sm:min-w-0"
               >
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-stone-900 border border-stone-100 dark:border-white/5 flex items-center justify-center text-stone-700 dark:text-stone-300 shadow-sm group-hover:scale-110 group-hover:bg-[#e2b884] group-hover:text-white hover:shadow-md transition-all">
-                  <Icon className="w-5 h-5" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white dark:bg-stone-900 border border-stone-100 dark:border-white/5 flex items-center justify-center text-stone-700 dark:text-stone-300 shadow-sm group-hover:scale-110 group-hover:bg-[#e2b884] group-hover:text-white hover:shadow-md transition-all">
+                  <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-stone-700 dark:group-hover:text-white truncate max-w-full">{act.label}</span>
+                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-stone-400 group-hover:text-stone-700 dark:group-hover:text-white truncate max-w-[72px] sm:max-w-full leading-tight mt-1">{act.label}</span>
               </button>
             );
           })}
@@ -245,28 +245,28 @@ export default function AestheticDashboard({
             <div 
               key={w.id} 
               onClick={() => onSelectEvent(w)}
-              className="premier-card p-5 bg-white/60 dark:bg-stone-900/40 hover:shadow-md cursor-pointer border border-stone-100/40 dark:border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all hover:translate-y-[-2px]"
+              className="premier-card p-3 sm:p-5 bg-white/60 dark:bg-stone-900/40 hover:shadow-md cursor-pointer border border-stone-100/40 dark:border-white/5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 transition-all hover:translate-y-[-2px]"
             >
-              <div className="flex gap-4">
-                <div className="w-20 aspect-video rounded-xl overflow-hidden bg-stone-100 shrink-0">
+              <div className="flex gap-3 sm:gap-4 items-center">
+                <div className="w-16 sm:w-20 aspect-video rounded-xl overflow-hidden bg-stone-100 shrink-0">
                   <img src={w.coverUrl || "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300"} className="w-full h-full object-cover" alt="Event preview" />
                 </div>
 
-                <div className="space-y-1 text-left">
-                  <h5 className="text-sm font-serif font-bold text-stone-950 dark:text-white">{w.name}</h5>
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-stone-400">
-                    <Calendar className="w-3.5 h-3.5" />
+                <div className="space-y-0.5 text-left min-w-0 flex-1">
+                  <h5 className="text-xs sm:text-sm font-serif font-bold text-stone-950 dark:text-white truncate">{w.name}</h5>
+                  <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-stone-400">
+                    <Calendar className="w-3 h-3 text-sand-primary" />
                     <span>{w.date}</span>
-                    <span>•</span>
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span>Jaipur, India</span>
+                    <span className="hidden sm:inline">•</span>
+                    <MapPin className="w-3 h-3 text-sand-primary" />
+                    <span className="truncate">Jaipur, India</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0 font-medium">
+              <div className="flex items-center gap-3 w-full md:w-auto mt-1 md:mt-0 font-medium">
                 <div className="flex-1 md:w-28 space-y-1">
-                  <div className="flex justify-between text-[9px] font-bold uppercase text-stone-400 leading-none">
+                  <div className="flex justify-between text-[8px] sm:text-[9px] font-bold uppercase text-stone-400 leading-none">
                     <span>Progress</span>
                     <span>50%</span>
                   </div>

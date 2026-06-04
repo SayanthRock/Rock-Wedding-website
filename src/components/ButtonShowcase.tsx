@@ -8,7 +8,7 @@ export default function ButtonShowcase() {
   const [clickCount, setClickCount] = useState(0);
 
   return (
-    <div className="p-8 md:p-12 glass-morphism rounded-[3.5rem] border border-white/20 shadow-2xl relative overflow-hidden backdrop-blur-3xl space-y-8">
+    <div className="p-4 sm:p-6 md:p-10 glass-morphism rounded-3xl md:rounded-[3.5rem] border border-white/20 shadow-xl relative overflow-hidden backdrop-blur-3xl space-y-6 sm:space-y-8">
       {/* Decorative Lights */}
       <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-stone-300/20 dark:bg-stone-500/5 rounded-full blur-[80px] pointer-events-none" />
@@ -51,9 +51,9 @@ export default function ButtonShowcase() {
       </div>
 
       {/* Main Interactive Stage */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-stretch relative z-10">
         {/* Playfield Element */}
-        <div className="lg:col-span-7 bg-stone-50 dark:bg-zinc-950/45 border border-stone-200/50 dark:border-white/5 rounded-[2.5rem] p-8 md:p-12 flex flex-col items-center justify-center min-h-[300px] text-center relative overflow-hidden shadow-inner">
+        <div className="lg:col-span-7 bg-stone-50 dark:bg-zinc-950/45 border border-stone-200/50 dark:border-white/5 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 md:p-12 flex flex-col items-center justify-center min-h-[220px] sm:min-h-[300px] text-center relative overflow-hidden shadow-inner">
           
           {activeMaterial === "liquid" ? (
             <div className="space-y-8 py-6 w-full max-w-sm">
@@ -125,8 +125,8 @@ export default function ButtonShowcase() {
         </div>
 
         {/* Technical Specification Deck & Code block */}
-        <div className="lg:col-span-5 flex flex-col justify-between gap-6">
-          <div className="p-6 rounded-[2rem] bg-stone-100 dark:bg-white/5 border border-stone-200/50 dark:border-white/5 space-y-4">
+        <div className="lg:col-span-5 flex flex-col justify-between gap-4 md:gap-6">
+          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] bg-stone-100 dark:bg-white/5 border border-stone-200/50 dark:border-white/5 space-y-4">
             <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-indigo-500 dark:text-indigo-400 flex items-center gap-2">
               <Eye className="w-3.5 h-3.5" /> Physical Metallurgy Info
             </h4>
@@ -164,7 +164,7 @@ export default function ButtonShowcase() {
             )}
           </div>
 
-          <div className="p-6 rounded-[2rem] bg-stone-900 border border-white/5 text-stone-300 font-mono text-[10px] space-y-3 shadow-inner">
+          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] bg-stone-900 border border-white/5 text-stone-300 font-mono text-[10px] space-y-3 shadow-inner">
             <p className="text-stone-400 font-bold border-b border-white/5 pb-2 text-[8px] uppercase tracking-widest text-[#EAD98F]">Import Syntax</p>
             {activeMaterial === "liquid" ? (
               <pre className="text-white/80 overflow-x-auto whitespace-pre leading-relaxed font-mono">

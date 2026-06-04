@@ -2523,12 +2523,70 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 gap-12">
+                {/* Atmospheric Ambiance Mixer */}
+                {user && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-6 md:p-10 glass-morphism rounded-3xl md:rounded-[3.5rem] space-y-6 text-left border border-stone-200/50 dark:border-white/5 relative overflow-hidden shadow-2xl"
+                  >
+                    <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-br from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-sand-primary animate-pulse" />
+                        <h3 className="text-xl font-bold uppercase tracking-widest text-stone-900 dark:text-white">Emotional Atmosphere Mixer</h3>
+                      </div>
+                      <p className="text-[10px] text-stone-400 uppercase tracking-widest leading-relaxed">
+                        Curate the chromatic essence of your experience. Click any sacred hue to bath the interface in its light.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                      {palettes.map((p, idx) => {
+                        const isCurrent = accentId === idx;
+                        return (
+                          <button
+                            key={p.name}
+                            onClick={() => setAccentId(idx)}
+                            className={`p-4 rounded-2xl flex flex-col items-start gap-3 transition-all relative border ${
+                              isCurrent 
+                                ? "bg-white dark:bg-stone-900 border-indigo-500/30 dark:border-indigo-500/50 shadow-md scale-[1.03]" 
+                                : "bg-white/40 dark:bg-stone-900/30 hover:bg-white/70 dark:hover:bg-stone-800/40 border-stone-100/50 dark:border-white/[0.03] scale-100"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span 
+                                className="w-4 h-4 rounded-full border border-white/20 shadow-md shrink-0 block"
+                                style={{ backgroundColor: p.accent, boxShadow: `0 0 10px ${p.accent}` }}
+                              />
+                              <span className="text-xs font-serif font-bold text-stone-800 dark:text-stone-100 truncate max-w-[100px]">{p.name}</span>
+                            </div>
+                            <span className="text-[8px] font-bold uppercase tracking-wider text-stone-400">
+                              {p.name === "Desert Sand" && "Warm Celebration"}
+                              {p.name === "Cosmic Indigo" && "Atmospheric Night"}
+                              {p.name === "Rose Quartz" && "Sacred Romance"}
+                              {p.name === "Emerald Glass" && "Lush Gardens"}
+                              {p.name === "Sunset Gold" && "Royal Palace"}
+                              {p.name === "Celestial Blue" && "Sky Sanctuary"}
+                              {p.name === "Lavender Fog" && "Dreamlike Evening"}
+                              {p.name === "Crimson Velvet" && "Deep Passion"}
+                            </span>
+                            {isCurrent && (
+                              <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Managed Sanctuaries */}
                 {user && (
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-12 glass-morphism rounded-[3.5rem] space-y-8"
+                    className="p-8 md:p-12 glass-morphism rounded-3xl md:rounded-[3.5rem] space-y-8"
                   >
                     <div className="flex items-center justify-between">
                        <div className="space-y-1">
