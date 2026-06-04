@@ -73,8 +73,15 @@ import {
   deleteDoc
 } from "firebase/firestore";
 
-type Step = "welcome" | "weddings" | "upload" | "verify" | "gallery" | "profile";
-type EventType = "wedding" | "anniversary" | "birthday";
+type Step = "welcome" | "weddings" | "upload" | "verify" | "gallery" | "profile" | "dashboard" | "calendar" | "details";
+type EventType = "wedding" | "anniversary" | "birthday" | "corporate" | "gala" | "sangeet" | "other";
+
+import { WeddingTask, WeddingGuest, BudgetItem, EventVendor } from "./types/premium";
+import { MOCK_WEDDINGS, MOCK_TASKS, MOCK_GUESTS, MOCK_BUDGET, MOCK_VENDORS, MOCK_ACTIVITY_FEED } from "./data/mockData";
+import AestheticDashboard from "./components/AestheticDashboard";
+import EventDetailsConsole from "./components/EventDetailsConsole";
+import CalendarView from "./components/CalendarView";
+import ButtonShowcase from "./components/ButtonShowcase";
 
 interface Wedding {
   id: string;
@@ -168,7 +175,7 @@ function LazyPhoto({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       onClick={onClick}
-      className="group relative aspect-[4/5] rounded-[3rem] overflow-hidden shadow-2xl shadow-stone-200/50 dark:shadow-black/50 cursor-pointer bg-stone-100 dark:bg-stone-900 border border-stone-200/50 dark:border-white/5"
+      className="group relative aspect-[4/5] ios-squircle overflow-hidden shadow-2xl shadow-stone-200/50 dark:shadow-black/50 cursor-pointer bg-stone-100 dark:bg-stone-900 border border-stone-200/50 dark:border-white/5"
     >
       {/* Placeholder / Shimmer */}
       <AnimatePresence>
@@ -255,7 +262,7 @@ function LazyPhoto({
                    e.stopPropagation();
                    onToggleSave(photo);
                  }}
-                 className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${isSaved ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-white/20 text-white hover:bg-white/40'}`}
+                 className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${isSaved ? 'accent-bg text-white shadow-lg accent-ring ring-4 ring-opacity-20' : 'bg-white/20 text-white hover:bg-white/40'}`}
               >
                  <Heart className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
               </button>
@@ -335,12 +342,84 @@ export default function App() {
 
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [step, setStep] = useState<Step>("welcome");
+  const [currentWedding, setCurrentWedding] = useState<Wedding | null>(null);
   const [isDark, setIsDark] = useState(true);
+  const [accentId, setAccentId] = useState(0);
+
+  const palettes = [
+    { name: "Desert Sand", accent: "#e2b884", glow: "rgba(226, 184, 132, 0.5)", soft: "rgba(226, 184, 132, 0.1)" },
+    { name: "Cosmic Indigo", accent: "#6366f1", glow: "rgba(99, 102, 241, 0.5)", soft: "rgba(99, 102, 241, 0.1)" },
+    { name: "Rose Quartz", accent: "#f472b6", glow: "rgba(244, 114, 182, 0.5)", soft: "rgba(244, 114, 182, 0.1)" },
+    { name: "Emerald Glass", accent: "#34d399", glow: "rgba(52, 211, 153, 0.5)", soft: "rgba(52, 211, 153, 0.1)" },
+    { name: "Sunset Gold", accent: "#fbbf24", glow: "rgba(251, 191, 36, 0.5)", soft: "rgba(251, 191, 36, 0.1)" },
+    { name: "Celestial Blue", accent: "#38bdf8", glow: "rgba(56, 189, 248, 0.5)", soft: "rgba(56, 189, 248, 0.1)" },
+    { name: "Lavender Fog", accent: "#a78bfa", glow: "rgba(167, 139, 250, 0.5)", soft: "rgba(167, 139, 250, 0.1)" },
+    { name: "Crimson Velvet", accent: "#f87171", glow: "rgba(248, 113, 113, 0.5)", soft: "rgba(248, 113, 113, 0.1)" },
+  ];
+
+  useEffect(() => {
+    const palette = palettes[accentId];
+    const root = document.documentElement;
+    root.style.setProperty("--accent", palette.accent);
+    root.style.setProperty("--accent-glow", palette.glow);
+    root.style.setProperty("--accent-soft", palette.soft);
+  }, [accentId]);
+
+  // Cycle accent on step change or wedding change
+  useEffect(() => {
+    setAccentId((prev) => (prev + 1) % palettes.length);
+  }, [step, currentWedding?.id]);
+
   const [activeTab, setActiveTab] = useState("home");
   const [onboardingStep, setOnboardingStep] = useState<number | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; message: string }[]>([]);
-  const [weddings, setWeddings] = useState<Wedding[]>([]);
-  const [currentWedding, setCurrentWedding] = useState<Wedding | null>(null);
+  const [weddings, setWeddings] = useState<Wedding[]>(MOCK_WEDDINGS);
+  const [beganExperience, setBeganExperience] = useState(() => {
+    return localStorage.getItem("onboarding_complete") === "true";
+  });
+  const [tasks, setTasks] = useState<WeddingTask[]>(() => {
+    const saved = localStorage.getItem("premier_tasks");
+    return saved ? JSON.parse(saved) : MOCK_TASKS;
+  });
+  const [guests, setGuests] = useState<WeddingGuest[]>(() => {
+    const saved = localStorage.getItem("premier_guests");
+    return saved ? JSON.parse(saved) : MOCK_GUESTS;
+  });
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(() => {
+    const saved = localStorage.getItem("premier_budget");
+    return saved ? JSON.parse(saved) : MOCK_BUDGET;
+  });
+  const [vendors, setVendors] = useState<EventVendor[]>(() => {
+    const saved = localStorage.getItem("premier_vendors");
+    return saved ? JSON.parse(saved) : MOCK_VENDORS;
+  });
+  const [activityFeeds, setActivityFeeds] = useState<{ id: string; eventId: string; message: string; timestamp: string }[]>(() => {
+    const saved = localStorage.getItem("premier_feed");
+    return saved ? JSON.parse(saved) : MOCK_ACTIVITY_FEED;
+  });
+
+  // Sync updates
+  useEffect(() => {
+    localStorage.setItem("premier_tasks", JSON.stringify(tasks));
+  }, [tasks]);
+  useEffect(() => {
+    localStorage.setItem("premier_guests", JSON.stringify(guests));
+  }, [guests]);
+  useEffect(() => {
+    localStorage.setItem("premier_budget", JSON.stringify(budgetItems));
+  }, [budgetItems]);
+  useEffect(() => {
+    localStorage.setItem("premier_vendors", JSON.stringify(vendors));
+  }, [vendors]);
+  useEffect(() => {
+    localStorage.setItem("premier_feed", JSON.stringify(activityFeeds));
+  }, [activityFeeds]);
+
+  useEffect(() => {
+    if (step === "welcome" && beganExperience) {
+      setStep("dashboard");
+    }
+  }, [step, beganExperience]);
   const [uploadedPhotos, setUploadedPhotos] = useState<Photo[]>([]);
   const [matchedIndices, setMatchedIndices] = useState<number[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -525,7 +604,9 @@ export default function App() {
       const q = query(collection(db, "weddings"));
       const unsubWeddings = onSnapshot(q, 
         (snapshot) => {
-          setWeddings(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Wedding)));
+          const fetched = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Wedding));
+          const combined = [...fetched, ...MOCK_WEDDINGS.filter(mw => !fetched.some(fw => fw.id === mw.id))];
+          setWeddings(combined);
         },
         (error) => {
           console.warn("Public wedding fetch limited", error);
@@ -605,9 +686,127 @@ export default function App() {
     }
   }, []);
 
+  const addPlanningTask = (taskData: Omit<WeddingTask, "id">) => {
+    const newTask: WeddingTask = {
+      ...taskData,
+      id: "task_" + Date.now()
+    };
+    setTasks(prev => [newTask, ...prev]);
+    const logInfo = {
+      id: "feed_" + Date.now(),
+      eventId: taskData.weddingId,
+      message: `New task assigned: ${taskData.title}`,
+      timestamp: "Just now"
+    };
+    setActivityFeeds(prev => [logInfo, ...prev]);
+    showNotification("Task assigned successfully");
+  };
+
+  const togglePlanningTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        const nextStatus = t.status === "completed" ? "pending" : "completed";
+        const logInfo = {
+          id: "feed_" + Date.now(),
+          eventId: t.weddingId,
+          message: `Task "${t.title}" marked as ${nextStatus}`,
+          timestamp: "Just now"
+        };
+        setActivityFeeds(prev => [logInfo, ...prev]);
+        return { ...t, status: nextStatus };
+      }
+      return t;
+    }));
+  };
+
+  const deletePlanningTask = (taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    showNotification("Task removed");
+  };
+
+  const addEventGuest = (guestData: Omit<WeddingGuest, "id">) => {
+    const newGuest: WeddingGuest = {
+      ...guestData,
+      id: "guest_" + Date.now()
+    };
+    setGuests(prev => [newGuest, ...prev]);
+    const logInfo = {
+      id: "feed_" + Date.now(),
+      eventId: guestData.weddingId,
+      message: `Guest registry updated: ${guestData.name} invited`,
+      timestamp: "Just now"
+    };
+    setActivityFeeds(prev => [logInfo, ...prev]);
+    showNotification("Guest added to registry");
+  };
+
+  const toggleGuestRSVP = (guestId: string, rsvp: WeddingGuest["rsvp"]) => {
+    setGuests(prev => prev.map(g => {
+      if (g.id === guestId) {
+        const logInfo = {
+          id: "feed_" + Date.now(),
+          eventId: g.weddingId,
+          message: `${g.name} RSVP updated to ${rsvp}`,
+          timestamp: "Just now"
+        };
+        setActivityFeeds(prev => [logInfo, ...prev]);
+        return { ...g, rsvp };
+      }
+      return g;
+    }));
+  };
+
+  const deleteEventGuest = (guestId: string) => {
+    setGuests(prev => prev.filter(g => g.id !== guestId));
+    showNotification("Guest removed");
+  };
+
+  const addBudgetItemExpense = (itemData: Omit<BudgetItem, "id">) => {
+    const newItem: BudgetItem = {
+      ...itemData,
+      id: "budget_" + Date.now()
+    };
+    setBudgetItems(prev => [newItem, ...prev]);
+    const logInfo = {
+      id: "feed_" + Date.now(),
+      eventId: itemData.weddingId,
+      message: `Added budget expense: ${itemData.name} (₹${itemData.amount})`,
+      timestamp: "Just now"
+    };
+    setActivityFeeds(prev => [logInfo, ...prev]);
+    showNotification("Budget expense saved");
+  };
+
+  const deleteBudgetItemExpense = (itemId: string) => {
+    setBudgetItems(prev => prev.filter(b => b.id !== itemId));
+    showNotification("Expense removed");
+  };
+
+  const addEventVendor = (vendorData: Omit<EventVendor, "id">) => {
+    const newVendor: EventVendor = {
+      ...vendorData,
+      id: "vendor_" + Date.now()
+    };
+    setVendors(prev => [newVendor, ...prev]);
+    const logInfo = {
+      id: "feed_" + Date.now(),
+      eventId: vendorData.weddingId,
+      message: `Booked vendor contract: ${vendorData.name} for ${vendorData.category}`,
+      timestamp: "Just now"
+    };
+    setActivityFeeds(prev => [logInfo, ...prev]);
+    showNotification("Vendor booked successfully");
+  };
+
+  const deleteEventVendor = (vendorId: string) => {
+    setVendors(prev => prev.filter(v => v.id !== vendorId));
+    showNotification("Vendor removed");
+  };
+
   const completeOnboarding = () => {
     setOnboardingStep(null);
     localStorage.setItem("onboarding_complete", "true");
+    setBeganExperience(true);
     showNotification("Welcome to E. Moments");
   };
 
@@ -1654,8 +1853,8 @@ export default function App() {
 
         {isStarting && !isMinimized && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/40 backdrop-blur-sm">
-            <Loader2 className="w-10 h-10 animate-spin text-indigo-400" />
-            <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-indigo-400">Calibrating Sensor...</p>
+            <Loader2 className="w-10 h-10 animate-spin accent-text" />
+            <p className="text-[10px] uppercase tracking-[0.3em] font-bold accent-text">Calibrating Sensor...</p>
           </div>
         )}
 
@@ -1673,10 +1872,10 @@ export default function App() {
         {!isMinimized && mode === "qr" && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className={`w-72 h-72 border-2 transition-all duration-300 rounded-[3rem] relative overflow-hidden ${justScanned ? 'border-green-400 bg-green-500/10' : 'border-white/20'}`}>
-              <div className={`absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 rounded-tl-2xl shadow-[0_0_20px_rgba(129,140,248,0.5)] transition-colors ${justScanned ? 'border-green-400' : 'border-indigo-400'}`} />
-              <div className={`absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 rounded-tr-2xl shadow-[0_0_20px_rgba(129,140,248,0.5)] transition-colors ${justScanned ? 'border-green-400' : 'border-indigo-400'}`} />
-              <div className={`absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 rounded-bl-2xl shadow-[0_0_20px_rgba(129,140,248,0.5)] transition-colors ${justScanned ? 'border-green-400' : 'border-indigo-400'}`} />
-              <div className={`absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 rounded-br-2xl shadow-[0_0_20px_rgba(129,140,248,0.5)] transition-colors ${justScanned ? 'border-green-400' : 'border-indigo-400'}`} />
+              <div className={`absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 rounded-tl-2xl shadow-xl transition-colors ${justScanned ? 'border-green-400' : 'accent-border'}`} />
+              <div className={`absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 rounded-tr-2xl shadow-xl transition-colors ${justScanned ? 'border-green-400' : 'accent-border'}`} />
+              <div className={`absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 rounded-bl-2xl shadow-xl transition-colors ${justScanned ? 'border-green-400' : 'accent-border'}`} />
+              <div className={`absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 rounded-br-2xl shadow-xl transition-colors ${justScanned ? 'border-green-400' : 'accent-border'}`} />
               
               <motion.div 
                 initial={{ top: "0%" }}
@@ -1818,116 +2017,126 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white font-sans selection:bg-stone-200 transition-colors duration-700 pb-24 relative"
+      className="min-h-screen bg-stone-100 dark:bg-stone-900 text-stone-900 dark:text-white font-sans selection:bg-stone-200 transition-all duration-1000 relative overflow-hidden flex items-center justify-center p-0 md:p-12"
+      style={{ 
+        backgroundColor: isDark ? undefined : `${palettes[accentId].accent}05`,
+      }}
     >
-      {/* Immersive UI Toggle */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[300] flex flex-col gap-4">
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setIsUiVisible(!isUiVisible)}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl border ${
-            isUiVisible 
-              ? 'bg-white dark:bg-stone-900 border-stone-200 dark:border-white/10 text-stone-900 dark:text-white' 
-              : 'bg-stone-900 text-white border-white/20 opacity-40 hover:opacity-100'
-          }`}
-          title={isUiVisible ? "Hide Interface" : "Show Interface"}
-        >
-          {isUiVisible ? <Zap className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-        </motion.button>
+      {/* Cinematic Ambient Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1], 
+            opacity: [0.1, 0.2, 0.1],
+            backgroundColor: palettes[accentId].accent 
+          }}
+          transition={{ duration: 15, repeat: Infinity }}
+          className="absolute -top-[20%] -left-[10%] w-[80%] aspect-square rounded-full blur-[150px]"
+          style={{ opacity: 0.1 }}
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.1, 1], 
+            opacity: [0.1, 0.15, 0.1],
+            backgroundColor: palettes[(accentId + 2) % palettes.length].accent 
+          }}
+          transition={{ duration: 12, repeat: Infinity, delay: 2 }}
+          className="absolute -bottom-[20%] -right-[10%] w-[70%] aspect-square rounded-full blur-[150px]"
+          style={{ opacity: 0.1 }}
+        />
       </div>
 
-      {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-[200] px-6 py-8 transition-all duration-700 ${showNav && isUiVisible ? 'translate-y-0 opacity-100' : '-translate-y-32 opacity-0 pointer-events-none'} ${step === "weddings" ? "max-w-none px-0" : ""}`}>
-        <div className={`max-w-[1600px] mx-auto flex items-center justify-between rounded-[2.5rem] px-8 py-4 transition-all duration-700 ${step === 'weddings' ? 'glass-dark border border-white/10 ring-1 ring-white/5 mx-6' : 'glass-morphism shadow-2xl shadow-stone-100 dark:shadow-black/50 ring-1 ring-white/40'}`}>
-          <div className="flex items-center gap-4 cursor-pointer group" onClick={() => { setStep("welcome"); setCurrentWedding(null); }}>
-             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-700 ${step === 'weddings' ? 'bg-white text-stone-900' : 'bg-stone-900 dark:bg-white text-white dark:text-stone-900'}`}>
-                <Heart className="w-6 h-6" />
-             </div>
-             <div className={`w-[1px] h-8 hidden md:block ${step === 'weddings' ? 'bg-white/10' : 'bg-stone-200 dark:bg-stone-800'}`} />
-             <div className="hidden md:block">
-                <p className={`text-[10px] font-bold uppercase tracking-[0.4em] ${step === 'weddings' ? 'text-white/40' : 'text-stone-400'}`}>Curated Memories</p>
-             </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsDark(!isDark)}
-              className={`p-3 rounded-xl transition-all hover:scale-110 active:scale-95 ${step === 'weddings' ? 'glass-dark text-white' : 'glass-morphism text-stone-900 dark:text-white'}`}
-            >
-              {isDark ? <Zap className="w-5 h-5 text-yellow-400" /> : <Zap className="w-5 h-5 text-stone-400" />}
-            </button>
-            {user && (
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="p-3 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 shadow-lg hover:scale-110 active:scale-95 transition-all"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            )}
-            {step === "gallery" && (
+      {/* Responsive Wrapper - Wide on PC, Compact on Mobile */}
+      <div className="w-full max-w-7xl h-screen md:h-[92vh] md:rounded-[3rem] bg-white dark:bg-stone-950 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] relative flex flex-col overflow-hidden transition-all duration-1000">
+        
+        {/* Compact Dynamic Island Header */}
+        {isUiVisible && (
+          <nav className="absolute top-4 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm md:max-w-xl transition-all duration-700">
+            <div className="glass-morphism rounded-2xl px-4 py-2 flex items-center justify-between shadow-xl ring-1 ring-white/10 backdrop-blur-3xl overflow-hidden border border-white/10">
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={toggleWatermark}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${
-                    (currentWedding?.watermarkEnabled ?? true) ? 'bg-stone-900 text-white shadow-lg shadow-stone-200' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                  }`}
-                >
-                  <Settings2 className="w-3.5 h-3.5" />
-                  Watermark: {(currentWedding?.watermarkEnabled ?? true) ? 'ON' : 'OFF'}
-                </button>
-                <button 
-                  onClick={handleDownloadAll}
-                  disabled={isDownloading}
-                  className="p-2 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all flex items-center gap-2 px-3 disabled:opacity-50"
-                  title="Download All Photos"
-                >
-                  {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Download All</span>
-                </button>
-                {currentWedding?.ownerId === user?.uid && (
+                {step !== "welcome" && (
                   <button 
-                    onClick={() => setShowWatermarkModal(true)}
-                    className="p-2 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-all"
+                    onClick={() => {
+                      if (step === "gallery") {
+                        setStep("weddings");
+                      } else if (step === "upload" || step === "weddings" || step === "profile") {
+                        setStep("welcome");
+                      }
+                      setAccentId((prev) => (prev + 1) % palettes.length);
+                    }}
+                    className="w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
                   >
-                    <Filter className="w-4 h-4" />
+                    <ArrowLeft className="w-3.5 h-3.5" />
                   </button>
                 )}
+                <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setStep("welcome"); setCurrentWedding(null); }}>
+                   <div className="w-7 h-7 rounded-lg bg-stone-900 dark:bg-white text-white dark:text-stone-900 flex items-center justify-center shadow-md group-hover:rotate-6 transition-transform">
+                      <Heart className="w-3.5 h-3.5 fill-current" />
+                   </div>
+                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-900 dark:text-white">E. Moments</p>
+                </div>
               </div>
-            )}
-            
-            {user ? (
-               <div className="flex items-center gap-3">
-                 <div className="hidden md:block text-right">
-                    <p 
-                      onClick={() => setStep("profile")}
-                      className="text-[10px] font-bold text-stone-900 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
-                    >
-                      {user.displayName?.split(" ")[0]}
-                    </p>
-                    <button onClick={handleLogout} className="text-[10px] text-stone-400 hover:text-stone-600 transition-colors uppercase tracking-widest">Logout</button>
-                 </div>
-                 <div 
-                   onClick={() => setStep("profile")}
-                   className="w-9 h-9 rounded-full border border-stone-200 overflow-hidden bg-stone-50 cursor-pointer hover:border-indigo-600 transition-all"
-                 >
-                    <img src={user.photoURL || ""} className="w-full h-full object-cover" />
-                 </div>
-               </div>
-            ) : (
-              <button 
-                onClick={signInWithGoogle}
-                className="px-6 py-2.5 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-[10px] font-bold uppercase tracking-widest hover:bg-stone-800 transition-all active:scale-95 shadow-xl"
-              >
-                Log In
-              </button>
-            )}
-          </div>
-        </div>
-      </nav>
+              
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsDark(!isDark)}
+                  className="w-7 h-7 rounded-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-white/10 flex items-center justify-center text-stone-400"
+                >
+                  {isDark ? <Zap className="w-3.5 h-3.5 text-yellow-500" /> : <Zap className="w-3.5 h-3.5" />}
+                </button>
+                {user && (
+                  <div 
+                    onClick={() => setStep("profile")}
+                    className="w-7 h-7 rounded-full border border-stone-200 dark:border-white/10 overflow-hidden bg-stone-100 dark:bg-stone-900 cursor-pointer"
+                  >
+                     <img src={user.photoURL || ""} className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </nav>
+        )}
 
-      <main className={`transition-all duration-700 ${showNav && isUiVisible ? 'pt-32 pb-24' : 'pt-0 pb-0'} ${step === "weddings" ? "max-w-none px-0 pt-0 pb-0" : "max-w-[100vw] px-6"} mx-auto`}>
-        <AnimatePresence mode="wait">
+        {/* Liquid Bottom Tab Bar - Slimmed Down */}
+        {isUiVisible && (
+          <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm md:max-w-xl">
+            <div className="glass-dark rounded-[2rem] p-1.5 flex items-center justify-around shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl border border-white/5">
+              {[
+                { id: beganExperience ? "dashboard" : "welcome", label: beganExperience ? "Home" : "Intro", icon: beganExperience ? Home : Sparkles },
+                { id: "weddings", label: "Events", icon: LayoutGrid },
+                { id: "calendar", label: "Calendar", icon: Calendar, disabled: !beganExperience },
+                { id: "gallery", label: "Studio", icon: ImageIcon, disabled: !currentWedding && !showSelectionsOnly },
+                { id: "profile", label: "Bio", icon: User }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = step === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    disabled={tab.disabled}
+                    onClick={() => {
+                        setStep(tab.id as Step);
+                        setAccentId((prev) => (prev + 1) % palettes.length);
+                    }}
+                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all relative ${isActive ? 'text-white' : 'text-white/40'} ${tab.disabled ? 'cursor-not-allowed opacity-10' : 'hover:scale-110 active:scale-95'}`}
+                  >
+                    {isActive && (
+                      <motion.div 
+                        layoutId="nav-pill"
+                        className="absolute inset-0 accent-bg opacity-20 rounded-2xl -z-10 shadow-inner"
+                      />
+                    )}
+                    <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse accent-text' : ''}`} />
+                    <span className="text-[6px] font-bold uppercase tracking-[0.2em]">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
+
+        <main className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 w-full relative ${isUiVisible ? 'pt-20 pb-28' : 'pt-0 pb-0'}`}>
+          <AnimatePresence mode="wait">
           {step === "welcome" && (
             <motion.div
               key="welcome"
@@ -1964,20 +2173,20 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   className="inline-flex items-center gap-4 px-8 py-4 rounded-full glass-morphism border border-white/40 shadow-2xl text-stone-900 dark:text-white text-[10px] font-bold uppercase tracking-[0.5em]"
                 >
-                  <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" />
+                  <Sparkles className="w-4 h-4 accent-text animate-pulse" />
                   E. Moments v3.0
                 </motion.div>
                 
-                <div className="space-y-6">
-                  <h1 className="text-[12vw] lg:text-[10rem] font-serif italic text-stone-900 dark:text-white leading-[0.85] tracking-tight">
-                    Look <br />
-                    <span className="text-stone-300 dark:text-stone-700/50">a little</span> more.
+                <div className="space-y-4">
+                  <h1 className="text-[10vw] lg:text-[7rem] font-serif italic text-stone-900 dark:text-white leading-[0.8] tracking-tight">
+                    Pure <br />
+                    <span className="text-stone-300 dark:text-stone-700/50">Eternal</span>
                   </h1>
                   <motion.div 
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
                     transition={{ duration: 1.5, ease: "circOut" }}
-                    className="h-[1px] w-40 bg-stone-900 dark:bg-white mx-auto opacity-20"
+                    className="h-[1px] w-24 accent-bg mx-auto opacity-40"
                   />
                 </div>
                 
@@ -1985,70 +2194,37 @@ export default function App() {
                   "Beyond mere pixels, we curate the emotional atmosphere of your most sacred exchanges."
                 </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+              <div className="flex flex-col items-center justify-center gap-4">
                 <button 
-                  onClick={() => user ? setStep("profile") : signInWithGoogle()}
-                  className="group relative px-16 py-7 rounded-[2.5rem] bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-[11px] uppercase tracking-[0.4em] shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_rgba(255,255,255,0.1)] overflow-hidden hover:scale-105 active:scale-95 transition-all"
+                  onClick={user ? () => setStep("profile") : signInWithGoogle}
+                  className="group relative w-full max-w-xs py-5 rounded-2xl accent-bg text-white font-bold text-[10px] uppercase tracking-[0.3em] shadow-xl overflow-hidden hover:scale-105 active:scale-95 transition-all"
                 >
-                  <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="relative flex items-center gap-4 text-xs">
-                    {user ? "Enter My Profile" : "Authenticate To Begin"}
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="relative flex items-center justify-center gap-3 text-[11px]">
+                    {user ? "View My Archive" : "Begin Experience"}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </button>
                 
-                <button 
-                  onClick={() => setShowJoinModal(true)}
-                  className="px-10 py-7 rounded-[2.5rem] glass-morphism border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 hover:translate-y-[-2px] transition-all"
-                >
-                  <div className="flex items-center gap-1">
-                    <UserPlus className="w-4 h-4 text-indigo-500" />
-                  </div>
-                  Enter Code
-                </button>
+                <div className="flex items-center gap-3 w-full max-w-xs">
+                  <button 
+                    onClick={() => setShowJoinModal(true)}
+                    className="flex-1 py-5 rounded-2xl glass-morphism border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white font-bold text-[9px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 hover:translate-y-[-2px] transition-all"
+                  >
+                    Enter Code
+                  </button>
 
-                <button 
-                  onClick={() => {
-                    setCameraInitialMode("qr");
-                    setShowCamera(true);
-                  }}
-                  className="px-10 py-7 rounded-[2.5rem] bg-indigo-600 text-white font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 hover:scale-105 transition-all shadow-xl shadow-indigo-500/20"
-                >
-                  <QrCode className="w-5 h-5" />
-                  Scan QR
-                </button>
-
-                <button 
-                  onClick={() => {
-                        if (currentWedding) {
-                          setStep("upload");
-                        } else {
-                          setStep("weddings");
-                          showNotification("Select a wedding to upload photos");
-                        }
-                      }}
-                      className="px-10 py-7 rounded-[2.5rem] bg-stone-900 border border-stone-800 text-white font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 hover:translate-y-[-2px] transition-all shadow-xl shadow-stone-900/20"
-                    >
-                      <Upload className="w-5 h-5 text-indigo-400" />
-                      Transmit
-                    </button>
-
-                    <button 
-                      onClick={() => setStep("weddings")}
-                      className="px-10 py-7 rounded-[2.5rem] bg-indigo-600/10 border border-indigo-200/50 text-indigo-600 font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 hover:translate-y-[-2px] transition-all"
-                    >
-                      <LayoutGrid className="w-5 h-5" />
-                      Explore Weddings
-                    </button>
-                    
-                    <button 
-                      onClick={() => setStep("weddings")}
-                      className="flex flex-col items-start gap-1 p-6 border-l border-stone-200 dark:border-white/10 hover:bg-stone-50 dark:hover:bg-white/5 transition-all text-left group"
-                    >
-                      <span className="text-[10px] font-bold text-stone-900 dark:text-white uppercase tracking-widest group-hover:text-indigo-500 transition-colors">Active Registries</span>
-                      <p className="text-4xl font-serif italic text-stone-300 dark:text-stone-700 group-hover:text-stone-800 dark:group-hover:text-stone-200 transition-colors">{weddings.length}+</p>
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => {
+                      setCameraInitialMode("qr");
+                      setShowCamera(true);
+                    }}
+                    className="p-5 rounded-2xl accent-bg text-white flex items-center justify-center hover:scale-110 transition-all shadow-xl accent-ring ring-2 ring-opacity-20"
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
               </div>
 
               {/* Featured Marquee Section */}
@@ -2066,7 +2242,7 @@ export default function App() {
                     className="flex gap-10 whitespace-nowrap w-max px-6"
                   >
                     {[...Array(12)].map((_, i) => (
-                      <div key={i} className="w-[30vw] md:w-[22vw] aspect-[4/5] rounded-[3rem] overflow-hidden bg-stone-200 dark:bg-white/5 border border-white/10 shadow-2xl relative group/card">
+                      <div key={i} className="w-[45vw] md:w-[35vw] aspect-[3/4] ios-squircle overflow-hidden bg-stone-200 dark:bg-white/5 border border-white/10 shadow-2xl relative group/card">
                         <img 
                           src={`https://images.unsplash.com/photo-${1519741497674 + i*200}?auto=format&fit=crop&q=80&w=800`} 
                           className="w-full h-full object-cover grayscale group-hover/card:grayscale-0 transition-all duration-1000 scale-110 group-hover/card:scale-100" 
@@ -2084,7 +2260,7 @@ export default function App() {
               {/* Philosophy Section */}
               <div className="max-w-7xl mx-auto px-10 grid grid-cols-1 md:grid-cols-3 gap-10 pt-20">
                 <div className="p-12 rounded-[3.5rem] glass-morphism border border-white/40 space-y-6 text-left group">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 rounded-2xl accent-bg text-white opacity-80 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Zap className="w-6 h-6" />
                   </div>
                   <h3 className="text-xl font-bold uppercase tracking-widest text-stone-900 dark:text-white">Instant <br />Recall</h3>
@@ -2269,7 +2445,7 @@ export default function App() {
                                   value={profileTitle}
                                   onChange={(e) => setProfileTitle(e.target.value)}
                                   placeholder="Elite Curator, Master of Moments..."
-                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
+                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 accent-ring ring-opacity-30 transition-all shadow-inner text-stone-900 dark:text-white"
                                 />
                              </div>
 
@@ -2279,7 +2455,7 @@ export default function App() {
                                   value={profileAbout}
                                   onChange={(e) => setProfileAbout(e.target.value)}
                                   placeholder="Tell us about your photographic journey..."
-                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner min-h-[100px] resize-none"
+                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 accent-ring ring-opacity-30 transition-all shadow-inner min-h-[100px] resize-none text-stone-900 dark:text-white"
                                 />
                              </div>
 
@@ -2289,7 +2465,7 @@ export default function App() {
                                   value={profileFavoriteSubject}
                                   onChange={(e) => setProfileFavoriteSubject(e.target.value)}
                                   placeholder="Portraits, Landscapes, Candids..."
-                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all shadow-inner"
+                                  className="w-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 accent-ring ring-opacity-30 transition-all shadow-inner text-stone-900 dark:text-white"
                                 />
                              </div>
                           </div>
@@ -2559,7 +2735,90 @@ export default function App() {
                     Expand Shared Network
                   </button>
                 </motion.div>
+
+                {/* Premium tactile button materials showcase */}
+                <ButtonShowcase />
               </div>
+            </motion.div>
+          )}
+
+          {step === "dashboard" && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-4 md:p-8"
+            >
+              <AestheticDashboard 
+                user={user}
+                weddings={weddings}
+                tasks={tasks}
+                guests={guests}
+                budgetItems={budgetItems}
+                onSelectEvent={(w) => {
+                  setCurrentWedding(w);
+                  setStep("details");
+                }}
+                onCreateEventClick={() => {
+                  setShowCreateModal(true);
+                }}
+              />
+            </motion.div>
+          )}
+
+          {step === "calendar" && (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-4 md:p-8"
+            >
+              <CalendarView 
+                weddings={weddings}
+                onSelectEvent={(w) => {
+                  setCurrentWedding(w);
+                  setStep("details");
+                }}
+              />
+            </motion.div>
+          )}
+
+          {step === "details" && currentWedding && (
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="p-4 md:p-8"
+            >
+              <EventDetailsConsole 
+                wedding={currentWedding}
+                tasks={tasks}
+                guests={guests}
+                budgetItems={budgetItems}
+                vendors={vendors}
+                activityFeeds={activityFeeds}
+                isDark={isDark}
+                onBack={() => {
+                  setStep("dashboard");
+                }}
+                onAddTask={addPlanningTask}
+                onToggleTask={togglePlanningTask}
+                onDeleteTask={deletePlanningTask}
+                onAddGuest={addEventGuest}
+                onToggleGuestRSVP={toggleGuestRSVP}
+                onDeleteGuest={deleteEventGuest}
+                onAddBudgetItem={addBudgetItemExpense}
+                onDeleteBudgetItem={deleteBudgetItemExpense}
+                onAddVendor={addEventVendor}
+                onToggleVendorStatus={() => {}}
+                onDeleteVendor={deleteEventVendor}
+                onEnterGallery={() => {
+                  setStep("gallery");
+                }}
+              />
             </motion.div>
           )}
 
@@ -3591,7 +3850,7 @@ export default function App() {
                                 type="text" 
                                 value={currentWedding.watermarkText || ""}
                                 onChange={(e) => updateWatermarkSettings({ watermarkText: e.target.value })}
-                                className="w-full px-6 py-4 rounded-2xl bg-stone-50 border border-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all font-serif italic text-lg"
+                                className="w-full px-6 py-4 rounded-2xl bg-stone-50 dark:bg-stone-950 border border-stone-100 dark:border-white/5 focus:outline-none focus:ring-2 accent-ring ring-opacity-30 transition-all font-serif italic text-lg text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500"
                               />
                             </div>
 
@@ -4328,7 +4587,7 @@ export default function App() {
                             }
                           }}
                           placeholder="Add new tag..."
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-[10px] text-white placeholder:text-white/20 focus:outline-none focus:ring-1 accent-ring ring-opacity-30 transition-all"
                         />
                         <button 
                           onClick={() => {
@@ -4402,58 +4661,8 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+      </div>
 
-      {/* Bottom Navigation Bar */}
-      <AnimatePresence>
-        {showNav && isUiVisible && (
-          <motion.div 
-            initial={{ y: 150, opacity: 0, x: "-50%" }}
-            animate={{ y: 0, opacity: 1, x: "-50%" }}
-            exit={{ y: 150, opacity: 0, x: "-50%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className={`fixed bottom-10 left-1/2 z-[200] px-6 w-full max-w-xl transition-all duration-700 ${step === 'weddings' ? 'scale-90 opacity-40 hover:scale-100 hover:opacity-100' : ''}`}
-          >
-            <div className="glass-dark rounded-[3rem] p-4 flex items-center justify-between shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/10 ring-1 ring-white/5">
-              <button 
-                onClick={() => { setActiveTab("home"); setStep("welcome"); setCurrentWedding(null); }}
-                className={`flex flex-col items-center gap-2 px-8 py-4 rounded-[2rem] transition-all ${activeTab === 'home' ? 'bg-white text-stone-900 shadow-xl scale-110' : 'text-stone-400 hover:text-white'}`}
-              >
-                <Home className="w-6 h-6" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
-              </button>
-              <button 
-                onClick={() => { setActiveTab("search"); setStep("weddings"); }}
-                className={`flex flex-col items-center gap-2 px-8 py-4 rounded-[2rem] transition-all ${activeTab === 'search' ? 'bg-white text-stone-900 shadow-xl scale-110' : 'text-stone-400 hover:text-white'}`}
-              >
-                <Search className="w-6 h-6" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">Search</span>
-              </button>
-              
-              <div className="w-[1px] h-8 bg-white/10" />
-    
-              <button 
-                onClick={() => { setActiveTab("user"); if (!user) { signInWithGoogle(); } else { setStep("profile"); } }}
-                className={`flex flex-col items-center gap-2 px-8 py-4 rounded-[2rem] transition-all ${activeTab === 'user' ? 'bg-white text-stone-900 shadow-xl scale-110' : 'text-stone-400 hover:text-white'}`}
-              >
-                {user ? (
-                  <img src={user.photoURL || ""} className="w-7 h-7 rounded-full ring-2 ring-white/10" />
-                ) : (
-                  <User className="w-6 h-6" />
-                )}
-                <span className="text-[10px] font-bold uppercase tracking-widest">{user ? "Profile" : "Join"}</span>
-              </button>
-    
-              <button 
-                onClick={() => { setIsDark(!isDark); }}
-                className="flex flex-col items-center gap-2 px-6 py-4 rounded-[2rem] text-stone-400 hover:text-white transition-all"
-              >
-                {isDark ? <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" /> : <Zap className="w-6 h-6" />}
-                <span className="text-[10px] font-bold uppercase tracking-widest">{isDark ? "Sun" : "Moon"}</span>
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
 
       {/* Join Wedding Modal */}
@@ -4469,15 +4678,15 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[3rem] p-12 w-full max-w-md shadow-2xl space-y-10 text-center"
+              className="bg-white dark:bg-stone-900 rounded-[3rem] p-12 w-full max-w-md shadow-2xl dark:shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-stone-100 dark:border-white/5 space-y-10 text-center"
             >
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto ring-1 ring-indigo-100 shadow-inner gap-1">
-                  <Camera className="w-4 h-4 text-indigo-300" />
-                  <QrCode className="w-8 h-8 text-indigo-500" />
+                <div className="w-16 h-16 bg-indigo-50 dark:bg-stone-800 rounded-2xl flex items-center justify-center mx-auto ring-1 ring-indigo-100 dark:ring-white/10 shadow-inner gap-1">
+                  <Camera className="w-4 h-4 text-indigo-300 dark:text-stone-500" />
+                  <QrCode className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
                 </div>
-                <h3 className="text-3xl font-serif italic text-stone-900">Join Event</h3>
-                <p className="text-stone-400 text-xs font-bold uppercase tracking-widest leading-relaxed">Enter the access key provided by the event host.</p>
+                <h3 className="text-3xl font-serif italic text-stone-900 dark:text-white">Join Event</h3>
+                <p className="text-stone-400 dark:text-stone-300 text-xs font-bold uppercase tracking-widest leading-relaxed">Enter the access key provided by the event host.</p>
               </div>
 
               <div className="space-y-6">
@@ -4488,7 +4697,7 @@ export default function App() {
                     value={joinId}
                     onChange={(e) => setJoinId(e.target.value)}
                     placeholder="e.g. event-code-123"
-                    className="w-full px-8 py-5 rounded-[2rem] bg-stone-50 border border-stone-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-mono text-sm tracking-tighter"
+                    className="w-full px-8 py-5 rounded-2xl bg-stone-50 dark:bg-stone-900 border border-stone-100 dark:border-white/5 focus:outline-none focus:ring-2 accent-ring ring-opacity-30 transition-all font-mono text-sm tracking-tighter text-stone-900 dark:text-white"
                   />
                 </div>
 
@@ -4498,13 +4707,13 @@ export default function App() {
                       setCameraInitialMode("qr");
                       setShowCamera(true);
                     }}
-                    className="flex-1 py-5 rounded-2xl border border-stone-100 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-stone-50 transition-all text-indigo-600"
+                    className="flex-1 py-5 rounded-2xl border border-stone-100 dark:border-white/10 font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all text-indigo-600 dark:text-indigo-400"
                   >
                     <QrCode className="w-4 h-4" /> Scan QR
                   </button>
                   <button 
                     onClick={() => setShowJoinModal(false)}
-                    className="px-6 py-5 rounded-2xl bg-stone-100 text-stone-400 font-bold text-[10px] uppercase tracking-widest"
+                    className="px-6 py-5 rounded-2xl bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-300 font-bold text-[10px] uppercase tracking-widest"
                   >
                     Cancel
                   </button>
@@ -4513,7 +4722,7 @@ export default function App() {
                 <button 
                   onClick={handleJoinWedding}
                   disabled={!joinId}
-                  className="w-full py-6 rounded-[2rem] bg-stone-900 text-white font-bold text-xs uppercase tracking-[0.4em] shadow-2xl hover:translate-y-[-4px] active:scale-95 transition-all disabled:opacity-30 disabled:translate-y-0"
+                  className="w-full py-6 rounded-[2rem] bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold text-xs uppercase tracking-[0.4em] shadow-2xl hover:translate-y-[-4px] active:scale-95 transition-all disabled:opacity-30 disabled:translate-y-0"
                 >
                   Join Event
                 </button>
@@ -4586,15 +4795,15 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white rounded-[3rem] p-12 w-full max-w-xl shadow-[0_40px_100px_rgba(0,0,0,0.2)] space-y-10"
+              className="bg-white dark:bg-stone-900 rounded-[3rem] p-12 w-full max-w-xl shadow-[0_40px_100px_rgba(0,0,0,0.2)] dark:shadow-[0_40px_100px_rgba(0,0,0,0.8)] border border-stone-100 dark:border-white/5 space-y-10"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-4xl font-serif italic text-stone-900">
+                <h3 className="text-4xl font-serif italic text-stone-900 dark:text-white">
                   {showEditModal ? "Edit Event" : "Create New Event"}
                 </h3>
                 <button 
                   onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} 
-                  className="p-3 hover:bg-stone-50 rounded-full transition-colors text-stone-400 hover:text-stone-900"
+                  className="p-3 hover:bg-stone-50 dark:hover:bg-stone-800 rounded-full transition-colors text-stone-400 hover:text-slate-200"
                 >
                   <X className="w-8 h-8" />
                 </button>
@@ -4616,8 +4825,8 @@ export default function App() {
                         }}
                         className={`py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all border ${
                           (showEditModal && editingWedding ? (editingWedding.type || "wedding") : newWeddingData.type) === type 
-                            ? 'bg-stone-900 text-white border-stone-900 shadow-xl' 
-                            : 'bg-white text-stone-400 border-stone-100 hover:border-stone-200'
+                            ? 'bg-stone-900 dark:bg-white text-white dark:text-stone-900 border-stone-900 dark:border-white shadow-xl' 
+                            : 'bg-white dark:bg-stone-950 text-stone-400 dark:text-indigo-200 border-stone-100 dark:border-white/5 hover:border-stone-200 dark:hover:border-white/10'
                         }`}
                       >
                         {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -4639,7 +4848,7 @@ export default function App() {
                       }
                     }}
                     placeholder={`e.g. My ${showEditModal && editingWedding ? (editingWedding.type || "Event") : newWeddingData.type}...`}
-                    className="w-full px-8 py-5 rounded-[2rem] bg-stone-50 border border-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all font-serif italic text-xl"
+                    className="w-full px-8 py-5 rounded-[2xl] bg-stone-50 dark:bg-stone-950 border border-stone-100 dark:border-white/5 focus:outline-none focus:ring-2 accent-ring ring-opacity-20 transition-all font-serif italic text-xl text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500"
                   />
                 </div>
 
@@ -4655,7 +4864,7 @@ export default function App() {
                         setNewWeddingData({...newWeddingData, date: e.target.value});
                       }
                     }}
-                    className="w-full px-8 py-5 rounded-[2rem] bg-stone-50 border border-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900/10 transition-all text-sm font-bold uppercase tracking-widest"
+                    className="w-full px-8 py-5 rounded-[2xl] bg-stone-50 dark:bg-stone-950 border border-stone-100 dark:border-white/5 focus:outline-none focus:ring-2 accent-ring ring-opacity-20 transition-all text-sm font-bold uppercase tracking-widest text-stone-900 dark:text-white"
                   />
                 </div>
 
@@ -4663,7 +4872,7 @@ export default function App() {
                   <label className="text-[10px] font-bold uppercase tracking-widest text-stone-400 ml-1">Atmospheric Cover (Optional)</label>
                   <div 
                     onClick={() => coverInputRef.current?.click()}
-                    className="w-full aspect-video rounded-[2rem] bg-stone-50 border border-stone-100 flex flex-col items-center justify-center cursor-pointer hover:bg-stone-100 transition-all overflow-hidden relative group"
+                    className="w-full aspect-video rounded-[2xl] bg-stone-50 dark:bg-stone-950 border border-stone-100 dark:border-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-stone-100 dark:hover:bg-white/5 transition-all overflow-hidden relative group"
                   >
                     {(showEditModal && editingWedding?.coverUrl) || newWeddingData.coverUrl ? (
                       <img 
