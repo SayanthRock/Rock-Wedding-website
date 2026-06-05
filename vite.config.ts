@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import tailwindcss from '@tailwindcss/vite';
+=======
+>>>>>>> origin/main
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
@@ -10,7 +13,10 @@ export default defineConfig(({mode}) => {
     base: './',
     plugins: [
       react(),
+<<<<<<< HEAD
       tailwindcss(),
+=======
+>>>>>>> origin/main
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
