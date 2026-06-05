@@ -10,10 +10,7 @@ export default defineConfig(({mode}) => {
     base: './',
     plugins: [
       react(),
-<<<<<<< HEAD
       tailwindcss(),
-=======
->>>>>>> origin/main
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
