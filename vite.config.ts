@@ -1,4 +1,3 @@
-import tailwindcss from 'tailwindcss';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
@@ -9,8 +8,7 @@ export default defineConfig(({mode}) => {
   return {
     base: './',
     plugins: [
-      react(), 
-      tailwindcss(),
+      react(),
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
