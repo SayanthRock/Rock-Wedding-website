@@ -1,17 +1,32 @@
-name: Build APK & Release
+name: Build & Release APK
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    name: Build APK
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -19,7 +34,7 @@ jobs:
           node-version: '18'
           cache: 'npm'
       
-      - name: Setup Java
+      - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -28,60 +43,112 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       
-      - name: Clean install
-        run: |
-          rm -rf node_modules package-lock.json
-          npm install
+      - name: Install dependencies
+        run: npm ci
+        continue-on-error: false
       
-      - name: Build web
+      - name: Build web assets
         run: npm run build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       
-      - name: Add Android platform
-        run: npx cap add android || true
+      - name: Initialize Capacitor Android
+        run: |
+          npx cap add android 2>/dev/null || true
+          npx cap sync android
       
-      - name: Sync Capacitor
-        run: npx cap sync android || true
-      
-      - name: Build APK
+      - name: Build Debug APK
+        if: github.event_name == 'push' || github.event.inputs.build_type == 'debug'
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
-        continue-on-error: true
+          ./gradlew assembleDebug --no-daemon
       
-      - name: Find APK
-        id: find_apk
+      - name: Build Release APK
+        if: github.event.inputs.build_type == 'release'
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk -name "*.apk" -type f | head -1)
-          if [ -z "$APK_PATH" ]; then
-            echo "APK_PATH=android/app/build/outputs/apk/debug/app-debug.apk" >> $GITHUB_OUTPUT
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+      
+      - name: Find built APK
+        id: apk
+        run: |
+          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "path=android/app/build/outputs/apk/debug/app-debug.apk" >> $GITHUB_OUTPUT
+            echo "name=app-debug.apk" >> $GITHUB_OUTPUT
+          elif [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "path=android/app/build/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
+            echo "name=app-release.apk" >> $GITHUB_OUTPUT
           else
-            echo "APK_PATH=$APK_PATH" >> $GITHUB_OUTPUT
+            echo "ERROR: APK not found!"
+            find android/app/build/outputs -name "*.apk" -type f
+            exit 1
           fi
       
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: success()
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: ${{ steps.find_apk.outputs.APK_PATH }}
-          tag_name: v${{ github.run_number }}
+          name: E-Moments-APK-${{ github.run_number }}
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+      
+      - name: Create Release and Upload APK
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ github.run_number }}
           name: E. Moments v${{ github.run_number }}
+          artifacts: ${{ steps.apk.outputs.path }}
           body: |
-            ## 📱 APK Release v${{ github.run_number }}
+            # 📱 E. Moments - APK Release v${{ github.run_number }}
             
-            **Download:** [E. Moments APK](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/app-debug.apk)
+            ## 📥 Download
+            **[E. Moments APK v${{ github.run_number }}](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/${{ steps.apk.outputs.name }})**
             
-            **Build Info:**
-            - Commit: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-            - Branch: `${{ github.ref_name }}`
+            ## 📋 Build Information
+            - **Build Type**: ${{ github.event.inputs.build_type || 'debug' }}
+            - **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - **Branch**: `${{ github.ref_name }}`
+            - **Built at**: ${{ github.event.head_commit.timestamp }}
             
-            **Installation:**
+            ## 🚀 Installation
+            
+            ### Option 1: Via ADB (Fastest)
             ```bash
-            adb install app-debug.apk
+            adb install ${{ steps.apk.outputs.name }}
             ```
+            
+            ### Option 2: Manual Installation
+            1. Download the APK file from above
+            2. Transfer to your Android device
+            3. Open file manager and tap the APK
+            4. Follow prompts to install
+            
+            ### Option 3: USB Installation
+            ```bash
+            adb devices
+            adb install -r ${{ steps.apk.outputs.name }}
+            ```
+            
+            ## ℹ️ App Details
+            - **App Name**: E. Moments
+            - **Package**: com.emoments.app
+            - **Min Android Version**: 6.0 (API 24)
+            - **Target Android Version**: 14 (API 34)
+            
+            ## 📞 Support
+            - Report issues: [GitHub Issues](https://github.com/${{ github.repository }}/issues)
+            - View changes: [Commits](https://github.com/${{ github.repository }}/commits/${{ github.sha }})
+            
+            ---
+            *Built automatically by GitHub Actions*
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Post release link
+        run: |
+          echo "✅ APK Successfully Built & Released!"
+          echo "📱 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
+          echo "📦 File: ${{ steps.apk.outputs.name }}"
