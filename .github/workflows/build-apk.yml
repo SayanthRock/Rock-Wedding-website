@@ -33,6 +33,8 @@ jobs:
       
       - name: Build web
         run: npm run build
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       
       - name: Add Android platform
         run: npx cap add android
@@ -44,44 +46,41 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
       
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
+        id: sign_apk
         with:
-          releaseDirectory: android/app/build/outputs/apk/debug
+          releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.SIGNING_KEY }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
       
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v1
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        with:
-          files: android/app/build/outputs/apk/debug/app-debug-signed.apk
-          tag_name: v${{ github.run_number }}
-          body: |
-            APK Build #${{ github.run_number }}
-            
-            **Download:** [app-debug-signed.apk](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/app-debug-signed.apk)
-            
-            Built from: ${{ github.sha }}
-            Branch: ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename APK
+        run: |
+          mv ${{ steps.sign_apk.outputs.signedReleaseFile }} app-release-${{ github.run_number }}.apk
       
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
+          files: app-release-${{ github.run_number }}.apk
           tag_name: v${{ github.run_number }}
-          release_name: Release v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
           body: |
-            Automated APK Build
+            ## APK Build #${{ github.run_number }}
             
-            **Changes:** https://github.com/${{ github.repository }}/commits/${{ github.sha }}
+            **Download APK:** [app-release-${{ github.run_number }}.apk](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/app-release-${{ github.run_number }}.apk)
+            
+            **Built from:**
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Time: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+            
+            **Changes:**
+            https://github.com/${{ github.repository }}/commits/${{ github.sha }}
           draft: false
           prerelease: false
-        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
