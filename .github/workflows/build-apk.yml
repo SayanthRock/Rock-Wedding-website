@@ -5,15 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build type'
-        required: true
-        default: 'debug'
-        type: choice
-        options:
-          - debug
-          - release
 
 permissions:
   contents: write
@@ -22,150 +13,107 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build APK
+    name: 🔨 Build APK
     
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
       
-      - name: Setup Java JDK
+      - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Setup Android SDK
+      - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
       
-      - name: Clean install dependencies
+      - name: 🧹 Clean install
         run: |
           rm -rf node_modules package-lock.json
-          npm install --legacy-peer-deps
+          npm install --legacy-peer-deps --no-save
       
-      - name: Build web assets
+      - name: 🏗️ Build web
         run: npm run build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       
-      - name: Initialize Capacitor Android
+      - name: 📱 Setup Capacitor
         run: |
           npx cap add android 2>/dev/null || true
           npx cap sync android
       
-      - name: Build Debug APK
-        if: github.event_name == 'push' || github.event.inputs.build_type == 'debug'
+      - name: 📦 Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
       
-      - name: Build Release APK
-        if: github.event.inputs.build_type == 'release'
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
-      
-      - name: Find built APK
+      - name: 🔍 Find APK
         id: apk
         run: |
-          if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "path=android/app/build/outputs/apk/debug/app-debug.apk" >> $GITHUB_OUTPUT
-            echo "name=E-Moments-debug-v${{ github.run_number }}.apk" >> $GITHUB_OUTPUT
-          elif [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
-            echo "path=android/app/build/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
-            echo "name=E-Moments-release-v${{ github.run_number }}.apk" >> $GITHUB_OUTPUT
+          APK=$(find android/app/build/outputs/apk -name "*.apk" -type f | head -1)
+          if [ ! -z "$APK" ]; then
+            echo "path=$APK" >> $GITHUB_OUTPUT
+            echo "name=$(basename $APK)" >> $GITHUB_OUTPUT
+            echo "✅ Found: $APK"
           else
-            echo "ERROR: APK not found!"
-            find android/app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+            echo "❌ APK not found!"
+            find android/app/build/outputs -type f -name "*.apk" 2>/dev/null || true
             exit 1
           fi
       
-      - name: Rename APK for release
-        run: |
-          if [ -f "${{ steps.apk.outputs.path }}" ]; then
-            cp "${{ steps.apk.outputs.path }}" "${{ steps.apk.outputs.name }}"
-          fi
-      
-      - name: Upload APK as artifact
+      - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: E-Moments-APK-${{ github.run_number }}
-          path: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.path }}
           retention-days: 30
       
-      - name: Create Release and Upload APK
-        uses: ncipollo/release-action@v1
+      - name: 🚀 Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag: v${{ github.run_number }}
+          files: ${{ steps.apk.outputs.path }}
+          tag_name: v${{ github.run_number }}
           name: E. Moments v${{ github.run_number }}
-          artifacts: ${{ steps.apk.outputs.name }}
           body: |
-            # 📱 E. Moments - APK Release v${{ github.run_number }}
+            # 📱 E. Moments APK v${{ github.run_number }}
             
-            ## 🎯 Download APK
-            **[⬇️ Download ${{ steps.apk.outputs.name }}](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/${{ steps.apk.outputs.name }})**
+            ## 📥 ഡൗൺലോഡ് ചെയ്യുക
+            **[⬇️ APK ഡൗൺലോഡ് ചെയ്യുക](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/${{ steps.apk.outputs.name }})**
             
-            ## 📋 Build Information
-            - **Build Type**: ${{ github.event.inputs.build_type || 'debug' }}
+            ## 📋 വിവരങ്ങൾ
             - **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             - **Branch**: `${{ github.ref_name }}`
             
-            ## 🚀 How to Install
+            ## 🚀 ഇൻസ്റ്റാൾ ചെയ്യുക
             
-            ### Quick Install (Windows/Mac/Linux)
+            ### വിധി 1: USB ഡീബഗിംഗ (ഉപയോഗിക്കാൻ ദ്രുതതം)
             ```bash
             adb install "${{ steps.apk.outputs.name }}"
             ```
             
-            ### Manual Installation
-            1. Download the APK from the link above
-            2. Connect Android phone via USB
-            3. Enable USB debugging on your phone
-            4. Run: `adb install app.apk`
+            ### വിധി 2: ഫോണിൽ നേരിട്ട് ഇൻസ്റ്റാൾ
+            1. ഡൗൺലോഡ് ചെയ്യുക
+            2. ഫോണിൽ തുറക്കുക
+            3. "ഇൻസ്റ്റാൾ" ടാപ് ചെയ്യുക
             
-            ### Direct Phone Installation
-            1. Download APK on your phone
-            2. Open file manager
-            3. Tap the APK file
-            4. Tap "Install"
-            5. Done!
-            
-            ## ℹ️ App Details
-            - **Name**: E. Moments
+            ## ℹ️ വിവരങ്ങൾ
+            - **App**: E. Moments
             - **Package**: com.emoments.app
-            - **Min Android**: 6.0 (API 24)
-            - **Size**: ~50-70MB
-            
-            ## 💡 Troubleshooting
-            
-            **"App won't install"**
-            - Uninstall old version first: `adb uninstall com.emoments.app`
-            - Reinstall: `adb install -r app.apk`
-            
-            **"Unknown app"**
-            - Go to phone Settings > Security
-            - Enable "Unknown sources" or "Install from unknown sources"
-            
-            **"Connection error"**
-            - Check USB debugging is enabled
-            - Try: `adb devices`
+            - **Min Android**: 6.0+
             
             ---
-            Built automatically by GitHub Actions | Release: v${{ github.run_number }}
+            **✨ GitHub Actions വഴി സ്വയമായി നിർമ്മിച്ചത്**
           draft: false
           prerelease: false
-          allowUpdates: false
           token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: ✅ Success - APK Released
-        run: |
-          echo "✅ APK Successfully Built & Released!"
-          echo "📱 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
-          echo "📦 File: ${{ steps.apk.outputs.name }}"
+      - name: ✅ Success
+        run: echo "🎉 APK നിർമ്മാണം സഫലമായി!"
