@@ -43,9 +43,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       
-      - name: Install dependencies
-        run: npm ci
-        continue-on-error: false
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
       
       - name: Build web assets
         run: npm run build
@@ -76,21 +77,27 @@ jobs:
         run: |
           if [ -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
             echo "path=android/app/build/outputs/apk/debug/app-debug.apk" >> $GITHUB_OUTPUT
-            echo "name=app-debug.apk" >> $GITHUB_OUTPUT
+            echo "name=E-Moments-debug-v${{ github.run_number }}.apk" >> $GITHUB_OUTPUT
           elif [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
             echo "path=android/app/build/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
-            echo "name=app-release.apk" >> $GITHUB_OUTPUT
+            echo "name=E-Moments-release-v${{ github.run_number }}.apk" >> $GITHUB_OUTPUT
           else
             echo "ERROR: APK not found!"
-            find android/app/build/outputs -name "*.apk" -type f
+            find android/app/build/outputs -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
             exit 1
+          fi
+      
+      - name: Rename APK for release
+        run: |
+          if [ -f "${{ steps.apk.outputs.path }}" ]; then
+            cp "${{ steps.apk.outputs.path }}" "${{ steps.apk.outputs.name }}"
           fi
       
       - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
           name: E-Moments-APK-${{ github.run_number }}
-          path: ${{ steps.apk.outputs.path }}
+          path: ${{ steps.apk.outputs.name }}
           retention-days: 30
       
       - name: Create Release and Upload APK
@@ -98,56 +105,66 @@ jobs:
         with:
           tag: v${{ github.run_number }}
           name: E. Moments v${{ github.run_number }}
-          artifacts: ${{ steps.apk.outputs.path }}
+          artifacts: ${{ steps.apk.outputs.name }}
           body: |
             # 📱 E. Moments - APK Release v${{ github.run_number }}
             
-            ## 📥 Download
-            **[E. Moments APK v${{ github.run_number }}](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/${{ steps.apk.outputs.name }})**
+            ## 🎯 Download APK
+            **[⬇️ Download ${{ steps.apk.outputs.name }}](https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/${{ steps.apk.outputs.name }})**
             
             ## 📋 Build Information
             - **Build Type**: ${{ github.event.inputs.build_type || 'debug' }}
             - **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
             - **Branch**: `${{ github.ref_name }}`
-            - **Built at**: ${{ github.event.head_commit.timestamp }}
             
-            ## 🚀 Installation
+            ## 🚀 How to Install
             
-            ### Option 1: Via ADB (Fastest)
+            ### Quick Install (Windows/Mac/Linux)
             ```bash
-            adb install ${{ steps.apk.outputs.name }}
+            adb install "${{ steps.apk.outputs.name }}"
             ```
             
-            ### Option 2: Manual Installation
-            1. Download the APK file from above
-            2. Transfer to your Android device
-            3. Open file manager and tap the APK
-            4. Follow prompts to install
+            ### Manual Installation
+            1. Download the APK from the link above
+            2. Connect Android phone via USB
+            3. Enable USB debugging on your phone
+            4. Run: `adb install app.apk`
             
-            ### Option 3: USB Installation
-            ```bash
-            adb devices
-            adb install -r ${{ steps.apk.outputs.name }}
-            ```
+            ### Direct Phone Installation
+            1. Download APK on your phone
+            2. Open file manager
+            3. Tap the APK file
+            4. Tap "Install"
+            5. Done!
             
             ## ℹ️ App Details
-            - **App Name**: E. Moments
+            - **Name**: E. Moments
             - **Package**: com.emoments.app
-            - **Min Android Version**: 6.0 (API 24)
-            - **Target Android Version**: 14 (API 34)
+            - **Min Android**: 6.0 (API 24)
+            - **Size**: ~50-70MB
             
-            ## 📞 Support
-            - Report issues: [GitHub Issues](https://github.com/${{ github.repository }}/issues)
-            - View changes: [Commits](https://github.com/${{ github.repository }}/commits/${{ github.sha }})
+            ## 💡 Troubleshooting
+            
+            **"App won't install"**
+            - Uninstall old version first: `adb uninstall com.emoments.app`
+            - Reinstall: `adb install -r app.apk`
+            
+            **"Unknown app"**
+            - Go to phone Settings > Security
+            - Enable "Unknown sources" or "Install from unknown sources"
+            
+            **"Connection error"**
+            - Check USB debugging is enabled
+            - Try: `adb devices`
             
             ---
-            *Built automatically by GitHub Actions*
+            Built automatically by GitHub Actions | Release: v${{ github.run_number }}
           draft: false
           prerelease: false
           allowUpdates: false
           token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Post release link
+      - name: ✅ Success - APK Released
         run: |
           echo "✅ APK Successfully Built & Released!"
           echo "📱 Download: https://github.com/${{ github.repository }}/releases/tag/v${{ github.run_number }}"
