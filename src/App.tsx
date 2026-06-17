@@ -52,7 +52,9 @@ import {
   ArrowDownAZ,
   Clock,
   ArrowUpDown,
-  Tags
+  Tags,
+  Play,
+  Pause
 } from "lucide-react";
 import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
 import { auth, db, signInWithGoogle, OperationType, handleFirestoreError, storage, getDetailedErrorMessage } from "./lib/firebase";
@@ -131,6 +133,9 @@ interface LazyPhotoProps {
   onDelete?: (photo: Photo) => void;
   canDelete?: boolean;
   onToggleSave: (photo: Photo) => void;
+  isBatchMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (photoId: string) => void;
 }
 
 function LazyPhoto({ 
@@ -143,7 +148,10 @@ function LazyPhoto({
   onShare,
   onDelete,
   canDelete,
-  onToggleSave
+  onToggleSave,
+  isBatchMode = false,
+  isSelected = false,
+  onToggleSelect
 }: LazyPhotoProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -174,8 +182,12 @@ function LazyPhoto({
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-      onClick={onClick}
-      className="group relative aspect-[4/5] ios-squircle overflow-hidden shadow-2xl shadow-stone-200/50 dark:shadow-black/50 cursor-pointer bg-stone-100 dark:bg-stone-900 border border-stone-200/50 dark:border-white/5"
+      onClick={isBatchMode ? () => onToggleSelect?.(photo.id) : onClick}
+      className={`group relative aspect-[4/5] ios-squircle overflow-hidden shadow-2xl shadow-stone-200/50 dark:shadow-black/50 cursor-pointer bg-stone-100 dark:bg-stone-900 border transition-all duration-300 ${
+        isSelected 
+          ? 'border-indigo-500 scale-[0.97] ring-4 ring-indigo-500/20' 
+          : 'border-stone-200/50 dark:border-white/5 hover:scale-[1.01]'
+      }`}
     >
       {/* Placeholder / Shimmer */}
       <AnimatePresence>
@@ -204,7 +216,7 @@ function LazyPhoto({
           src={photo.url} 
           onLoad={() => setIsLoaded(true)}
           loading="lazy"
-          className={`w-full h-full object-cover transition-all duration-[1.5s] group-hover:scale-110 ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+          className={`w-full h-full object-cover transition-all duration-[1.5s] ${isBatchMode ? '' : 'group-hover:scale-110'} ${isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
           style={{ filter: `blur(${currentWedding?.photoBlur || 0}px)` }}
         />
       )}
@@ -237,70 +249,87 @@ function LazyPhoto({
                 <Camera className="w-5 h-5 text-white mx-auto mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
                 <p className="font-serif italic text-white whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" style={{ fontSize: `${(currentWedding.watermarkTextSize || 18)}px` }}>
                    {currentWedding.watermarkText || "E. Moments"}
-                </p>
+                 </p>
                 <p className="text-[10px] text-white font-bold uppercase tracking-[0.4em] drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">{currentWedding.date}</p>
              </div>
            )}
         </div>
       )}
       
-      {isSaved && (
+      {/* Batch Select Overlay Element */}
+      {isBatchMode && (
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-30">
+          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+            isSelected 
+              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg scale-110" 
+              : "border-white/80 bg-black/30 text-transparent hover:border-white"
+          }`}>
+            <svg className="w-4 h-4 stroke-[3.5]" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {isSaved && !isBatchMode && (
         <div className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white dark:bg-stone-950 flex items-center justify-center shadow-2xl ring-1 ring-black/5 z-20">
           <CheckCircle2 className="w-5 h-5 text-green-600" />
         </div>
       )}
       
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-10">
-         <div className="flex items-center justify-between">
-            <div className="space-y-1">
-               <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">Hand-Picked Moment</p>
-               <p className="font-serif italic text-2xl text-white">{photo.name}</p>
-            </div>
-            <div className="flex gap-3">
-              <button 
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   onToggleSave(photo);
-                 }}
-                 className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${isSaved ? 'accent-bg text-white shadow-lg accent-ring ring-4 ring-opacity-20' : 'bg-white/20 text-white hover:bg-white/40'}`}
-              >
-                 <Heart className={`w-5 h-5 ${isSaved ? 'fill-current' : ''}`} />
-              </button>
-              <button 
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   onShare(photo);
-                 }}
-                 className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/40 transition-all text-white"
-              >
-                 <Share2 className="w-5 h-5" />
-              </button>
-              {canDelete && onDelete && (
+      {!isBatchMode && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-6 sm:p-10">
+           <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                 <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">Hand-Picked Moment</p>
+                 <p className="font-serif italic text-lg sm:text-2xl text-white truncate max-w-[120px] sm:max-w-[200px]">{photo.name}</p>
+              </div>
+              <div className="flex gap-2 sm:gap-3">
                 <button 
                    onClick={(e) => {
                      e.stopPropagation();
-                     onDelete(photo);
+                     onToggleSave(photo);
                    }}
-                   className="w-12 h-12 rounded-full bg-red-500/20 backdrop-blur-md flex items-center justify-center hover:bg-red-500/40 transition-all group/del"
+                   className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${isSaved ? 'accent-bg text-white shadow-lg accent-ring ring-4 ring-opacity-20' : 'bg-white/20 text-white hover:bg-white/40'}`}
                 >
-                   <Trash2 className="w-5 h-5 text-white group-hover/del:scale-110 transition-transform" />
+                   <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isSaved ? 'fill-current' : ''}`} />
                 </button>
-              )}
-              <button 
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   onDownload(photo.url, `E-Moment-${photo.id}.jpg`);
-                 }}
-                 className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/40 transition-all"
-              >
-                 <Download className="w-5 h-5 text-white" />
-              </button>
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
-                 <Maximize2 className="w-5 h-5 text-white" />
+                <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     onShare(photo);
+                   }}
+                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/40 transition-all text-white"
+                >
+                   <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                {canDelete && onDelete && (
+                  <button 
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       onDelete(photo);
+                     }}
+                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-500/20 backdrop-blur-md flex items-center justify-center hover:bg-red-500/40 transition-all group/del"
+                  >
+                     <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/del:scale-110 transition-transform" />
+                  </button>
+                )}
+                <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     onDownload(photo.url, `E-Moment-${photo.id}.jpg`);
+                   }}
+                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center hover:bg-white/40 transition-all"
+                >
+                   <Download className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </button>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                   <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
               </div>
-            </div>
-         </div>
-      </div>
+           </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -442,7 +471,15 @@ export default function App() {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [savedPhotos, setSavedPhotos] = useState<Photo[]>([]);
+  const [isSlideshowOpen, setIsSlideshowOpen] = useState(false);
+  const [slideshowIndex, setSlideshowIndex] = useState(0);
+  const [isSlideshowPlaying, setIsSlideshowPlaying] = useState(true);
+  const [slideshowSpeed, setSlideshowSpeed] = useState(4000);
+  const [slideshowProgress, setSlideshowProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'tags'>('newest');
   const [copied, setCopied] = useState(false);
@@ -1561,6 +1598,58 @@ export default function App() {
     }
   };
 
+  const handleToggleSelectPhoto = (photoId: string) => {
+    setSelectedPhotoIds(prev => 
+      prev.includes(photoId) 
+        ? prev.filter(id => id !== photoId) 
+        : [...prev, photoId]
+    );
+  };
+
+  const handleSelectAllPhotos = (photosList: Photo[]) => {
+    const allIds = photosList.map(p => p.id);
+    setSelectedPhotoIds(allIds);
+  };
+
+  const handleDeselectAllPhotos = () => {
+    setSelectedPhotoIds([]);
+  };
+
+  const handleBatchDeletePhotos = async () => {
+    if (selectedPhotoIds.length === 0 || !currentWedding) return;
+    
+    setIsDeleting(true);
+    try {
+      const deletePromises = selectedPhotoIds.map(async (photoId) => {
+        try {
+          await deleteDoc(doc(db, "weddings", currentWedding.id, "photos", photoId));
+          const p = uploadedPhotos.find(up => up.id === photoId);
+          if (p) {
+            try {
+              const fileRef = ref(storage, p.url);
+              await deleteObject(fileRef);
+            } catch (storageErr) {
+              console.warn("Storage delete skipped/failed:", storageErr);
+            }
+          }
+        } catch (e) {
+          handleFirestoreError(e, OperationType.DELETE, `weddings/${currentWedding.id}/photos/${photoId}`);
+        }
+      });
+      
+      await Promise.all(deletePromises);
+      showNotification(`${selectedPhotoIds.length} photos deleted successfully`);
+      setSelectedPhotoIds([]);
+      setIsBatchMode(false);
+    } catch (e) {
+      console.error(e);
+      showNotification(getDetailedErrorMessage(e));
+    } finally {
+      setIsDeleting(false);
+      setShowBatchDeleteConfirm(false);
+    }
+  };
+
   const handleUpdateWedding = async () => {
     if (!user || !editingWedding) return;
     try {
@@ -1716,6 +1805,64 @@ export default function App() {
     }
     return 0;
   });
+
+  const photosInCurrentView = showSelectionsOnly 
+    ? sortedPhotos.filter(p => savedPhotos.some(s => s.url === p.url)) 
+    : sortedPhotos;
+
+  const handleNextSlide = () => {
+    if (photosInCurrentView.length === 0) return;
+    setSlideshowIndex(prev => (prev + 1) % photosInCurrentView.length);
+    setSlideshowProgress(0);
+  };
+
+  const handlePrevSlide = () => {
+    if (photosInCurrentView.length === 0) return;
+    setSlideshowIndex(prev => (prev - 1 + photosInCurrentView.length) % photosInCurrentView.length);
+    setSlideshowProgress(0);
+  };
+
+  useEffect(() => {
+    if (!isSlideshowOpen || !isSlideshowPlaying || photosInCurrentView.length === 0) {
+      setSlideshowProgress(0);
+      return;
+    }
+
+    const startTime = Date.now();
+    const intervalTime = 50;
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const percent = Math.min((elapsed / slideshowSpeed) * 100, 100);
+      setSlideshowProgress(percent);
+
+      if (percent >= 100) {
+        setSlideshowIndex(prev => (prev + 1) % photosInCurrentView.length);
+        setSlideshowProgress(0);
+      }
+    }, intervalTime);
+
+    return () => clearInterval(timer);
+  }, [isSlideshowOpen, isSlideshowPlaying, slideshowIndex, slideshowSpeed, photosInCurrentView.length]);
+
+  useEffect(() => {
+    if (!isSlideshowOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        handleNextSlide();
+      } else if (e.key === "ArrowLeft") {
+        handlePrevSlide();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        setIsSlideshowPlaying(prev => !prev);
+      } else if (e.key === "Escape") {
+        setIsSlideshowOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSlideshowOpen, slideshowIndex, photosInCurrentView.length, isSlideshowPlaying]);
 
   const CameraCapture = ({ onCapture, onClose, onScan, accessKeyId, initialMode = "photo" }: { onCapture: (url: string) => void, onClose: () => void, onScan?: (data: string) => void, accessKeyId?: string, initialMode?: "photo" | "qr" }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -2089,7 +2236,7 @@ export default function App() {
                     onClick={() => setStep("profile")}
                     className="w-7 h-7 rounded-full border border-stone-200 dark:border-white/10 overflow-hidden bg-stone-100 dark:bg-stone-900 cursor-pointer"
                   >
-                     <img src={user.photoURL || ""} className="w-full h-full object-cover" />
+                     <img src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-full h-full object-cover" alt="Profile" />
                   </div>
                 )}
               </div>
@@ -2316,7 +2463,7 @@ export default function App() {
               <div className="flex flex-col items-center text-center space-y-8">
                 <div className="relative group">
                   <div className="w-40 h-40 rounded-full ring-4 ring-stone-900/5 dark:ring-white/10 p-1.5 transition-transform duration-700 group-hover:scale-105">
-                    <img src={user?.photoURL || ""} className="w-full h-full rounded-full object-cover shadow-2xl" />
+                    <img src={user?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-full h-full rounded-full object-cover shadow-2xl" alt="Profile" />
                   </div>
                   <button 
                     onClick={() => profilePicRef.current?.click()}
@@ -3021,8 +3168,8 @@ export default function App() {
                                 className="group/profile relative overflow-hidden rounded-2xl bg-indigo-500/10 border border-indigo-500/30 hover:border-indigo-400 hover:bg-indigo-500/20 transition-all p-5 space-y-4 cursor-pointer"
                               >
                                 <div className="flex items-center gap-4">
-                                   <div className="w-12 h-12 rounded-full border-2 border-indigo-400/50 overflow-hidden shadow-lg shadow-indigo-500/20">
-                                      <img src={user.photoURL || ""} className="w-full h-full object-cover" />
+                                   <div className="w-12 h-12 rounded-full border-2 border-indigo-400/50 overflow-hidden shadow-lg shadow-indigo-400/20">
+                                      <img src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-full h-full object-cover" alt="Profile" />
                                    </div>
                                    <div className="space-y-0.5">
                                       <h4 className="font-serif italic text-lg text-white group-hover/profile:text-indigo-300 transition-colors">My Profile</h4>
@@ -3482,6 +3629,22 @@ export default function App() {
                          )}
                        </button>
                      </div>
+                     
+                     {photosInCurrentView.length > 0 && (
+                       <button 
+                         onClick={() => {
+                           setSlideshowIndex(0);
+                           setIsSlideshowPlaying(true);
+                           setSlideshowProgress(0);
+                           setIsSlideshowOpen(true);
+                         }}
+                         className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[9px] font-bold uppercase tracking-[0.2em] transition-all flex items-center gap-2 shadow-md shrink-0 whitespace-nowrap cursor-pointer hover:translate-y-[-1px]"
+                         style={{ backgroundColor: "#4f46e5" }}
+                       >
+                         <Play className="w-3 h-3 fill-current" />
+                         Slideshow
+                       </button>
+                     )}
                   </div>
 
                   {/* AI Summarization Section */}
@@ -4281,65 +4444,141 @@ export default function App() {
                 )}
               </div>
 
-              {/* Sorting Section */}
-              <div className="flex flex-wrap items-center gap-3 pt-4 pb-8 border-b border-stone-100 dark:border-white/5 mb-8">
-                <div className="flex items-center gap-2 mr-4">
-                  <ArrowUpDown className="w-3 h-3 text-stone-400" />
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Chronology & Order</span>
-                </div>
-
-                <div className="flex bg-stone-50 dark:bg-white/5 p-1 rounded-xl gap-1">
-                  <button 
-                    onClick={() => setSortBy('newest')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'newest' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    Newest
-                  </button>
-                  <button 
-                    onClick={() => setSortBy('oldest')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'oldest' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
-                  >
-                    <Clock className="w-3 h-3" />
-                    Oldest
-                  </button>
-                  <button 
-                    onClick={() => setSortBy('name')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
-                  >
-                    <ArrowDownAZ className="w-3 h-3" />
-                    A-Z
-                  </button>
-                  <button 
-                    onClick={() => setSortBy('tags')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'tags' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
-                  >
-                    <Tags className="w-3 h-3" />
-                    Tag Class
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10">
-                {(showSelectionsOnly 
+              {/* Sorting & Batch Actions Section */}
+              {(() => {
+                const photosInCurrentView = showSelectionsOnly 
                   ? sortedPhotos.filter(p => savedPhotos.some(s => s.url === p.url)) 
-                  : sortedPhotos
-                ).map((photo, i) => (
-                    <LazyPhoto 
-                      key={photo.id}
-                      photo={photo}
-                      currentWedding={currentWedding}
-                      index={i}
-                      isSaved={savedPhotos.some(s => s.url === photo.url)}
-                      onClick={() => setSelectedPhoto(photo)}
-                      onDownload={(url, name) => handleDownloadPhoto(url, name)}
-                      onShare={(p) => handleSharePhoto(p)}
-                      onDelete={(p) => setPhotoToDelete(p)}
-                      onToggleSave={(p) => handleToggleSave(p)}
-                      canDelete={user?.uid === photo.uploadedBy || user?.uid === currentWedding?.ownerId}
-                    />
-                ))}
-              </div>
+                  : sortedPhotos;
+                const photosUserCanDeleteInView = photosInCurrentView.filter(
+                  photo => user?.uid === photo.uploadedBy || user?.uid === currentWedding?.ownerId
+                );
+
+                return (
+                  <>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-4 pb-8 border-b border-stone-100 dark:border-white/5 mb-8">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 mr-4 text-stone-500">
+                          <ArrowUpDown className="w-3 h-3 text-stone-400" />
+                          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Chronology & Order</span>
+                        </div>
+
+                        <div className="flex bg-stone-50 dark:bg-white/5 p-1 rounded-xl gap-1">
+                          <button 
+                            onClick={() => setSortBy('newest')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'newest' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
+                          >
+                            <Clock className="w-3 h-3" />
+                            Newest
+                          </button>
+                          <button 
+                            onClick={() => setSortBy('oldest')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'oldest' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
+                          >
+                            <Clock className="w-3 h-3" />
+                            Oldest
+                          </button>
+                          <button 
+                            onClick={() => setSortBy('name')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
+                          >
+                            <ArrowDownAZ className="w-3 h-3" />
+                            A-Z
+                          </button>
+                          <button 
+                            onClick={() => setSortBy('tags')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${sortBy === 'tags' ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-sm' : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'}`}
+                          >
+                            <Tags className="w-3 h-3" />
+                            Tag Class
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Curator / Contributor Batch Selection Actions */}
+                      {user && currentWedding && photosUserCanDeleteInView.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {isBatchMode ? (
+                            <>
+                              <button
+                                onClick={() => handleSelectAllPhotos(photosUserCanDeleteInView)}
+                                className="px-4 py-2 bg-stone-100 dark:bg-white/5 hover:bg-stone-200 dark:hover:bg-white/10 text-stone-600 dark:text-stone-200 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all"
+                              >
+                                Select All ({photosUserCanDeleteInView.length})
+                              </button>
+                              <button
+                                onClick={handleDeselectAllPhotos}
+                                className="px-4 py-2 bg-stone-100 dark:bg-white/5 hover:bg-stone-200 dark:hover:bg-white/10 text-stone-400 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all"
+                              >
+                                Deselect All
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (selectedPhotoIds.length > 0) {
+                                    setShowBatchDeleteConfirm(true);
+                                  } else {
+                                    showNotification("Select photos to batch remove");
+                                  }
+                                }}
+                                disabled={selectedPhotoIds.length === 0}
+                                className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${
+                                  selectedPhotoIds.length > 0
+                                    ? "bg-red-650 text-white shadow-md shadow-red-500/20 hover:translate-y-[-1px] cursor-pointer"
+                                    : "bg-stone-100 dark:bg-white/5 text-stone-400 cursor-not-allowed"
+                                }`}
+                                style={selectedPhotoIds.length > 0 ? { backgroundColor: "#dc2626" } : {}}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete Selected ({selectedPhotoIds.length})
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setIsBatchMode(false);
+                                  setSelectedPhotoIds([]);
+                                }}
+                                className="px-4 py-2 border border-stone-250 dark:border-white/10 hover:bg-stone-50 dark:hover:bg-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all text-stone-550 dark:text-stone-300"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setIsBatchMode(true);
+                                setSelectedPhotoIds([]);
+                              }}
+                              className="px-4 py-2.5 bg-stone-900 hover:bg-stone-850 dark:bg-white dark:hover:bg-stone-100 text-white dark:text-stone-900 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
+                            >
+                              <Settings2 className="w-3.5 h-3.5" />
+                              Batch Select / Clean Up
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-10">
+                      {photosInCurrentView.map((photo, i) => (
+                        <LazyPhoto 
+                          key={photo.id}
+                          photo={photo}
+                          currentWedding={currentWedding}
+                          index={i}
+                          isSaved={savedPhotos.some(s => s.url === photo.url)}
+                          onClick={() => setSelectedPhoto(photo)}
+                          onDownload={(url, name) => handleDownloadPhoto(url, name)}
+                          onShare={(p) => handleSharePhoto(p)}
+                          onDelete={(p) => setPhotoToDelete(p)}
+                          onToggleSave={(p) => handleToggleSave(p)}
+                          canDelete={user?.uid === photo.uploadedBy || user?.uid === currentWedding?.ownerId}
+                          isBatchMode={isBatchMode}
+                          isSelected={selectedPhotoIds.includes(photo.id)}
+                          onToggleSelect={handleToggleSelectPhoto}
+                        />
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
 
               {showSelectionsOnly && matchedPhotos.filter(p => savedPhotos.some(s => s.url === p.url)).length === 0 && (
                 <motion.div 
@@ -4840,6 +5079,246 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Batch Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {showBatchDeleteConfirm && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[600] flex items-center justify-center p-6 bg-black/80 backdrop-blur-2xl"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-dark max-w-sm w-full p-10 rounded-[3rem] border border-red-500/20 shadow-[0_40px_100px_rgba(239,68,68,0.2)] text-center space-y-8"
+            >
+              <div className="w-20 h-20 bg-red-500/20 rounded-[2.5rem] flex items-center justify-center mx-auto ring-1 ring-red-500/30">
+                <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-serif italic text-white flex items-center justify-center gap-2">
+                   Delete {selectedPhotoIds.length} Photos?
+                </h3>
+                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest leading-relaxed px-4">
+                  This action cannot be undone and will permanently erase these {selectedPhotoIds.length} images from the wedding gallery.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleBatchDeletePhotos}
+                  disabled={isDeleting}
+                  className="w-full py-6 rounded-[2rem] bg-red-650 text-white font-bold text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:translate-y-[-2px] active:scale-95 transition-all shadow-xl shadow-red-500/20 disabled:opacity-50"
+                  style={{ backgroundColor: "#dc2626" }}
+                >
+                  {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Confirm Batch Delete
+                </button>
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="w-full py-6 rounded-[2rem] bg-white/5 text-white/40 font-bold text-[10px] uppercase tracking-[0.3em] hover:text-white transition-all hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Immersive Slideshow Modal */}
+      <AnimatePresence>
+        {isSlideshowOpen && photosInCurrentView.length > 0 && (() => {
+          const currentPhoto = photosInCurrentView[slideshowIndex] || photosInCurrentView[0];
+          if (!currentPhoto) return null;
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[700] bg-stone-955/98 backdrop-blur-3xl flex flex-col justify-between p-6 select-none"
+              style={{ backgroundColor: "rgba(12, 10, 9, 0.98)" }}
+            >
+              {/* Header section with branding, status and exit */}
+              <div className="flex items-center justify-between w-full pb-4 border-b border-white/5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-indigo-400">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                    <span className="text-[10px] font-mono uppercase tracking-[0.3em] font-medium">Automatic Playback Engine</span>
+                  </div>
+                  <h3 className="text-xl font-serif italic text-white leading-none">
+                    {currentWedding ? currentWedding.name : "Event Gallery"} {showSelectionsOnly ? "• My Selection" : ""}
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="text-white/40 font-mono text-[10px] uppercase tracking-wider hidden md:inline">
+                    Space to Play/Pause • Arrows to Nav • Esc to Exit
+                  </span>
+                  <button
+                    onClick={() => setIsSlideshowOpen(false)}
+                    className="p-3 rounded-full bg-white/5 hover:bg-white/15 text-white/60 hover:text-white transition-all cursor-pointer hover:rotate-90"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full max-w-4xl mx-auto h-1 bg-white/5 overflow-hidden rounded-full mt-2 relative">
+                <div
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-[50ms] ease-linear"
+                  style={{ width: `${isSlideshowPlaying ? slideshowProgress : 0}%` }}
+                />
+              </div>
+
+              {/* Main Theater / Media Viewer Area */}
+              <div className="relative flex-grow flex items-center justify-center py-6 min-h-0">
+                {/* Floating Left Mouse Arrow */}
+                <button
+                  onClick={handlePrevSlide}
+                  className="absolute left-4 p-4 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all z-10 hidden sm:flex items-center justify-center cursor-pointer"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                {/* The main photograph container */}
+                <div className="relative max-h-full max-w-4xl aspect-auto w-full flex items-center justify-center">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.div
+                      key={currentPhoto.id}
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 1.04 }}
+                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      className="relative overflow-hidden rounded-2xl bg-black/40 border border-white/5 shadow-[0_25px_70px_rgba(0,0,0,0.8)] max-h-[55vh] flex items-center justify-center p-1"
+                    >
+                      <img
+                        src={currentPhoto.url}
+                        className="max-h-[53vh] max-w-full rounded-xl object-contain select-none pointer-events-none"
+                        alt={currentPhoto.name || "Slideshow"}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Tags */}
+                  {(currentPhoto.tags && currentPhoto.tags.length > 0) && (
+                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-1.5 z-10">
+                      <Tags className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-[10px] font-mono uppercase tracking-[0.1em] text-white/85">
+                        {currentPhoto.tags[0]}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Floating Right Mouse Arrow */}
+                <button
+                  onClick={handleNextSlide}
+                  className="absolute right-4 p-4 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all z-10 hidden sm:flex items-center justify-center cursor-pointer"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Bottom Controllers & Thumbnails */}
+              <div className="space-y-6 w-full max-w-4xl mx-auto pt-4 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[11px] text-white/40 uppercase tracking-widest font-semibold bg-white/5 px-3 py-1 rounded-lg">
+                      Photo {slideshowIndex + 1} of {photosInCurrentView.length}
+                    </span>
+                    <span className="text-white/30 text-xs italic">
+                      {currentPhoto.name || `Photo ${slideshowIndex + 1}`}
+                    </span>
+                  </div>
+
+                  {/* Playback Controls */}
+                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 shadow-lg">
+                    <button
+                      onClick={handlePrevSlide}
+                      className="p-3 text-white/50 hover:text-white hover:bg-white/5 transition-all rounded-xl cursor-pointer"
+                      title="Previous"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => setIsSlideshowPlaying(prev => !prev)}
+                      className="p-3 bg-indigo-600 hover:bg-indigo-700 hover:scale-105 active:scale-95 text-white transition-all rounded-xl shadow-md min-w-[50px] flex items-center justify-center cursor-pointer"
+                      title={isSlideshowPlaying ? "Pause (Space)" : "Play (Space)"}
+                      style={{ backgroundColor: "#4f46e5" }}
+                    >
+                      {isSlideshowPlaying ? (
+                        <Pause className="w-4 h-4 fill-white text-white" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-white text-white" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleNextSlide}
+                      className="p-3 text-white/50 hover:text-white hover:bg-white/5 transition-all rounded-xl cursor-pointer"
+                      title="Next"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Speed options */}
+                  <div className="flex items-center gap-1.5 bg-white/5 p-1 rounded-2xl border border-white/10">
+                    <span className="text-[9px] font-bold text-white/30 uppercase tracking-wider px-2 block select-none">
+                      SPEED:
+                    </span>
+                    {[2000, 4000, 6000, 8000].map((speed) => (
+                      <button
+                        key={speed}
+                        onClick={() => {
+                          setSlideshowSpeed(speed);
+                          setSlideshowProgress(0);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-mono tracking-widest uppercase transition-all cursor-pointer ${
+                          slideshowSpeed === speed
+                            ? "bg-white text-stone-900 font-bold"
+                            : "text-white/40 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        {speed / 1000}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Thumbnails list */}
+                <div className="flex items-center gap-3 overflow-x-auto py-2 px-1 max-w-full scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {photosInCurrentView.map((photo, idx) => (
+                    <button
+                      key={photo.id}
+                      onClick={() => {
+                        setSlideshowIndex(idx);
+                        setSlideshowProgress(0);
+                      }}
+                      className={`relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 transition-all cursor-pointer ${
+                        idx === slideshowIndex
+                          ? "ring-2 ring-indigo-500 scale-105 opacity-100 shadow-md shadow-indigo-500/20"
+                          : "opacity-30 hover:opacity-100 scale-95 hover:scale-100"
+                      }`}
+                    >
+                      <img src={photo.url} className="w-full h-full object-cover select-none pointer-events-none" alt="" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
       {/* Wedding Modals - Create & Edit */}
       <AnimatePresence>
         {(showCreateModal || showEditModal) && (
@@ -4932,18 +5411,24 @@ export default function App() {
                     onClick={() => coverInputRef.current?.click()}
                     className="w-full aspect-video rounded-[2xl] bg-stone-50 dark:bg-stone-950 border border-stone-100 dark:border-white/5 flex flex-col items-center justify-center cursor-pointer hover:bg-stone-100 dark:hover:bg-white/5 transition-all overflow-hidden relative group"
                   >
-                    {(showEditModal && editingWedding?.coverUrl) || newWeddingData.coverUrl ? (
-                      <img 
-                        src={showEditModal && editingWedding ? editingWedding.coverUrl : newWeddingData.coverUrl} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                        alt="Cover Preview"
-                      />
-                    ) : (
-                      <>
-                        <ImageIcon className="w-8 h-8 text-stone-200" />
-                        <p className="text-[8px] font-bold uppercase tracking-widest text-stone-400 mt-2">Select Hero Image</p>
-                      </>
-                    )}
+                    {(() => {
+                      const coverUrl = (showEditModal && editingWedding) ? editingWedding.coverUrl : newWeddingData.coverUrl;
+                      if (!coverUrl) {
+                        return (
+                          <>
+                            <ImageIcon className="w-8 h-8 text-stone-200" />
+                            <p className="text-[8px] font-bold uppercase tracking-widest text-stone-400 mt-2">Select Hero Image</p>
+                          </>
+                        );
+                      }
+                      return (
+                        <img 
+                          src={coverUrl} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                          alt="Cover Preview"
+                        />
+                      );
+                    })()}
                     <div className="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                        <Plus className="w-8 h-8 text-white" />
                     </div>
