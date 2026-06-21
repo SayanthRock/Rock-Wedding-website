@@ -481,7 +481,7 @@ export default function App() {
   const [isSlideshowPlaying, setIsSlideshowPlaying] = useState(true);
   const [slideshowSpeed, setSlideshowSpeed] = useState(4000);
   const [slideshowProgress, setSlideshowProgress] = useState(0);
-  const [apkTargetUrl, setApkTargetUrl] = useState("https://ais-pre-bvewmtc3bf43qbwelokjfe-822790960391.asia-east1.run.app");
+  const [apkTargetUrl, setApkTargetUrl] = useState("https://sayanthrock.github.io/Rock-Wedding-website/");
   const [apkAppName, setApkAppName] = useState("E. Moments");
   const [apkPackageId, setApkPackageId] = useState("com.emoments.app");
   const [apkVersion, setApkVersion] = useState("1.0.0");
@@ -589,11 +589,6 @@ export default function App() {
   };
 
   // Fetch profile data when entering profile step
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.origin) {
-      setApkTargetUrl(window.location.origin);
-    }
-  }, []);
 
   useEffect(() => {
     if (step === "profile" && user) {
