@@ -1,0 +1,8 @@
+{
+	"appId": "com.emoments.app",
+	"appName": "E. Moments",
+	"webDir": "dist",
+	"server": {
+		"androidScheme": "https"
+	}
+}
