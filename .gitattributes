@@ -1,0 +1,6 @@
+# Keep Gradle and Android binary files from being rewritten as text.
+*.jar binary
+*.jks binary
+*.keystore binary
+*.apk binary
+*.aab binary
