@@ -1,42 +1,50 @@
-# E. Moments - Mobile & GitHub Deployment Guide
+# Rock Wedding Website
 
-This project is now configured for **Progressive Web App (PWA)** support and **Capacitor** integration for Android/iOS conversion.
+A Progressive Web App and Capacitor Android project for wedding photo sharing and event management.
 
-## 1. Export to GitHub
-The best way to use this with GitHub is to use the built-in AI Studio export feature:
-1. Click on the **Settings** (gear icon) in the top right.
-2. Select **Export to GitHub**.
-3. Follow the prompts to authorize and push your code to a new repository.
+## Live Website
 
-## 2. Converting to APK (Mobile App)
-I have pre-installed **Capacitor**. Once you have exported the code to your local machine, follow these steps:
+GitHub Pages link:
 
-### Prerequisites:
-- [Node.js](https://nodejs.org/) installed.
-- [Android Studio](https://developer.android.com/studio) installed.
+https://sayanthrock.github.io/Rock-Wedding-website/
 
-### Steps:
-1. **Clone your repository** or download the ZIP from GitHub.
-2. Open a terminal in the project folder.
-3. Run:
-   ```bash
-   npm install
-   npm run build
-   ```
-4. Initialize Android platform:
-   ```bash
-   npx cap add android
-   ```
-5. Open the project in Android Studio:
-   ```bash
-   npx cap open android
-   ```
-6. In Android Studio, wait for Gradle to sync, then click **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+The website is deployed automatically from the `main` branch using GitHub Actions.
 
-## 3. PWA (Progressive Web App)
-The app is already configured with `vite-plugin-pwa`. 
-- When deployed (e.g., via Cloud Run or Vercel/Netlify), users will be prompted to "Add to Home Screen".
-- It works offline (basic caching) and behaves like a native app.
+## Build Website Locally
 
-## 4. Environment Variables
-Remember to set your `GEMINI_API_KEY` and Firebase config in your deployment platform settings (not in the code).
+```bash
+npm install
+npm run build
+```
+
+For GitHub Pages, the workflow builds with:
+
+```bash
+VITE_BASE_PATH=/Rock-Wedding-website/ npx vite build
+```
+
+## Android APK / AAB Build
+
+The Android project is built with Capacitor and Gradle.
+
+```bash
+npm install
+npm run build
+npx cap sync android
+cd android
+./gradlew assembleRelease
+./gradlew bundleRelease
+```
+
+## GitHub Actions
+
+This repository includes workflows for:
+
+- GitHub Pages website deployment
+- Android release APK/AAB build
+
+## Notes
+
+- Static website output is generated in `dist`.
+- `404.html` is copied from `index.html` during Pages deployment so app routes do not hit a GitHub Pages 404.
+- Android uses vector launcher and splash resources to avoid broken PNG resource compilation.
