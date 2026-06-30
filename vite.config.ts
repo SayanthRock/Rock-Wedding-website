@@ -1,21 +1,24 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig(({mode}) => {
+export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+
   return {
-    base: '/Rock-Wedding-website/',
+    // Relative asset paths work both inside Capacitor's Android WebView and on GitHub Pages.
+    // Absolute repo paths make Android builds open a blank screen, because apparently URLs enjoy drama.
+    base: env.VITE_BASE_PATH || './',
     plugins: [
-      react(), 
+      react(),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'E. Moments',
-          short_name: 'E. Moments',
+          name: 'Rock Wedding',
+          short_name: 'Rock Wedding',
           description: 'AI-powered wedding photography portal',
           theme_color: '#000000',
           icons: [
@@ -35,7 +38,7 @@ export default defineConfig(({mode}) => {
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modify this unless you specifically want noisy dev-server flickering.
       hmr: false,
       watch: null,
       port: 3000,
