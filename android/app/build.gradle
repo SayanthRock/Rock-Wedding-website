@@ -1,16 +1,8 @@
 apply plugin: 'com.android.application'
 
-def signingStoreFileName = System.getenv("SIGNING_STORE_FILE") ?: "release-keystore.jks"
-def signingStorePassword = System.getenv("SIGNING_STORE_PASSWORD")
-def signingKeyAlias = System.getenv("SIGNING_KEY_ALIAS")
-def signingKeyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-def signingStoreFile = file(signingStoreFileName)
-def hasReleaseSigning = signingStorePassword && signingKeyAlias && signingKeyPassword && signingStoreFile.exists()
-
 android {
     namespace = "com.emoments.app"
     compileSdk = rootProject.ext.compileSdkVersion
-
     defaultConfig {
         applicationId "com.emoments.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -24,26 +16,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-
-    signingConfigs {
-        release {
-            if (hasReleaseSigning) {
-                storeFile signingStoreFile
-                storePassword signingStorePassword
-                keyAlias signingKeyAlias
-                keyPassword signingKeyPassword
-            }
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (hasReleaseSigning) {
-                signingConfig signingConfigs.release
-            } else {
-                logger.warn("Release signing is not configured. The release artifact may be unsigned unless CI provides a fallback key.")
+            signingConfig signingConfigs.release
+        }
+    }
+    signingConfigs {
+        release {
+            if (System.getenv("SIGNING_STORE_PASSWORD")) {
+                storeFile file("release-keystore.jks")
+                storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword System.getenv("SIGNING_KEY_PASSWORD")
             }
         }
     }
