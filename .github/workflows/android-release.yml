@@ -46,6 +46,17 @@ jobs:
           java-version: '17'
           cache: gradle
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14.3
+
+      - name: Regenerate Gradle wrapper
+        working-directory: android
+        run: |
+          gradle wrapper --gradle-version 8.14.3 --distribution-type all
+          chmod +x ./gradlew
+
       - name: Prepare Android signing
         shell: bash
         env:
@@ -63,36 +74,18 @@ jobs:
             echo "SIGNING_STORE_PASSWORD=$RELEASE_STORE_PASSWORD" >> "$GITHUB_ENV"
             echo "SIGNING_KEY_ALIAS=$RELEASE_KEY_ALIAS" >> "$GITHUB_ENV"
             echo "SIGNING_KEY_PASSWORD=$RELEASE_KEY_PASSWORD" >> "$GITHUB_ENV"
-            echo "Using release signing secrets. Humanity has briefly avoided chaos."
+            echo "Release signing secrets found."
           else
-            keytool -genkeypair \
-              -v \
-              -keystore android/app/ci-release.keystore \
-              -storepass android \
-              -keypass android \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Rock Wedding CI,O=SayanthRock,C=IN" \
-              -noprompt
-            echo "SIGNING_STORE_FILE=ci-release.keystore" >> "$GITHUB_ENV"
-            echo "SIGNING_STORE_PASSWORD=android" >> "$GITHUB_ENV"
-            echo "SIGNING_KEY_ALIAS=androiddebugkey" >> "$GITHUB_ENV"
-            echo "SIGNING_KEY_PASSWORD=android" >> "$GITHUB_ENV"
-            echo "Release signing secrets are incomplete, so a CI fallback key was generated. Add real secrets for Play Store-ready releases."
+            echo "Release signing secrets are incomplete. Building unsigned release artifacts."
           fi
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x android/gradlew
 
       - name: Build APK
         working-directory: android
-        run: bash ./gradlew --no-daemon assembleRelease
+        run: ./gradlew --no-daemon assembleRelease
 
       - name: Build AAB
         working-directory: android
-        run: bash ./gradlew --no-daemon bundleRelease
+        run: ./gradlew --no-daemon bundleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
