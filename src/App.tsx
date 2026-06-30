@@ -375,6 +375,14 @@ export default function App() {
   const [currentWedding, setCurrentWedding] = useState<Wedding | null>(null);
   const [isDark, setIsDark] = useState(true);
   const [accentId, setAccentId] = useState(0);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % 4);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
 
   const palettes = [
     { name: "Desert Sand", accent: "#e2b884", glow: "rgba(226, 184, 132, 0.5)", soft: "rgba(226, 184, 132, 0.1)" },
@@ -2446,9 +2454,9 @@ To compile easily, run the building script inside this directory:
 
   return (
     <div 
-      className="min-h-screen bg-stone-100 dark:bg-stone-900 text-stone-900 dark:text-white font-sans selection:bg-stone-200 transition-all duration-1000 relative overflow-hidden flex items-center justify-center p-0 md:p-12"
+      className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white font-sans selection:bg-stone-200 transition-all duration-1000 relative overflow-hidden flex items-center justify-center p-0"
       style={{ 
-        backgroundColor: isDark ? undefined : `${palettes[accentId].accent}05`,
+        backgroundColor: isDark ? undefined : `${palettes[accentId].accent}02`,
       }}
     >
       {/* Cinematic Ambient Background */}
@@ -2475,71 +2483,35 @@ To compile easily, run the building script inside this directory:
         />
       </div>
 
-      {/* Responsive Wrapper - Wide on PC, Compact on Mobile */}
-      <div className="w-full max-w-7xl h-screen md:h-[92vh] md:rounded-[3rem] bg-white dark:bg-stone-950 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] relative flex flex-col overflow-hidden transition-all duration-1000">
+      {/* Responsive Wrapper - Full screen edge-to-edge layout */}
+      <div className="w-full h-screen bg-stone-50 dark:bg-stone-950 relative flex flex-col md:flex-row overflow-hidden transition-all duration-1000">
         
-        {/* Compact Dynamic Island Header */}
-        {isUiVisible && (
-          <nav className="absolute top-4 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm md:max-w-xl transition-all duration-700">
-            <div className="glass-morphism rounded-2xl px-4 py-2 flex items-center justify-between shadow-xl ring-1 ring-white/10 backdrop-blur-3xl overflow-hidden border border-white/10">
-              <div className="flex items-center gap-2">
-                {step !== "welcome" && (
-                  <button 
-                    onClick={() => {
-                      if (step === "gallery") {
-                        setStep("weddings");
-                      } else if (step === "upload" || step === "weddings" || step === "profile" || step === "apk") {
-                        setStep("welcome");
-                      }
-                      setAccentId((prev) => (prev + 1) % palettes.length);
-                    }}
-                    className="w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setStep("welcome"); setCurrentWedding(null); }}>
-                   <div className="w-7 h-7 rounded-lg bg-stone-900 dark:bg-white text-white dark:text-stone-900 flex items-center justify-center shadow-md group-hover:rotate-6 transition-transform">
-                      <Heart className="w-3.5 h-3.5 fill-current" />
-                   </div>
-                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-900 dark:text-white">E. Moments</p>
+        {/* Desktop Premium Sidebar Navigation */}
+        <aside className="hidden md:flex flex-col w-72 bg-white/40 dark:bg-stone-950/40 border-r border-stone-200/40 dark:border-white/5 p-8 justify-between shrink-0 backdrop-blur-2xl relative z-40">
+          <div className="space-y-12">
+            {/* Brand logo - High-end Editorial styling */}
+            <div className="flex flex-col gap-2 cursor-pointer group text-left" onClick={() => { setStep("welcome"); setCurrentWedding(null); }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 flex items-center justify-center shadow-lg group-hover:rotate-12 transition-all duration-700">
+                  <Heart className="w-4 h-4 fill-current text-rose-400 dark:text-rose-500 animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-xs font-serif italic tracking-[0.25em] text-stone-900 dark:text-white uppercase font-bold">E. Moments</h1>
+                  <p className="text-[8px] font-bold text-stone-400 dark:text-stone-500 tracking-[0.3em] uppercase">Studio Atelier</p>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsDark(!isDark)}
-                  className="w-7 h-7 rounded-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-white/10 flex items-center justify-center text-stone-400"
-                >
-                  {isDark ? <Zap className="w-3.5 h-3.5 text-yellow-500" /> : <Zap className="w-3.5 h-3.5" />}
-                </button>
-                {user && (
-                  <div 
-                    onClick={() => setStep("profile")}
-                    className="w-7 h-7 rounded-full border border-stone-200 dark:border-white/10 overflow-hidden bg-stone-100 dark:bg-stone-900 cursor-pointer"
-                  >
-                     <img src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-full h-full object-cover" alt="Profile" />
-                  </div>
-                )}
-              </div>
+              <div className="h-[1px] w-full bg-gradient-to-r from-stone-200/60 via-stone-200/20 to-transparent dark:from-white/10 dark:via-white/5 mt-2" />
             </div>
-          </nav>
-        )}
 
-        {/* Liquid Bottom Tab Bar - Slimmed Down */}
-        {isUiVisible && (
-          <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm md:max-w-xl">
-            <div 
-              className="glass-dark rounded-[2rem] p-1.5 flex items-center justify-around shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl border border-white/5"
-              style={{ borderStyle: "inset", fontWeight: "bold", fontFamily: "system-ui" }}
-            >
+            {/* Premium Navigation List */}
+            <nav className="flex flex-col gap-1.5 text-left">
               {[
-                { id: beganExperience ? "dashboard" : "welcome", label: beganExperience ? "Home" : "Intro", icon: beganExperience ? Home : Sparkles },
-                { id: "weddings", label: "Events", icon: LayoutGrid },
+                { id: beganExperience ? "dashboard" : "welcome", label: beganExperience ? "Dashboard" : "Intro", icon: beganExperience ? Home : Sparkles },
+                { id: "weddings", label: "My Events", icon: LayoutGrid },
                 { id: "calendar", label: "Calendar", icon: Calendar, disabled: !beganExperience },
-                { id: "gallery", label: "Studio", icon: ImageIcon, disabled: !currentWedding && !showSelectionsOnly },
-                { id: "apk", label: "APK Conv", icon: Smartphone },
-                { id: "profile", label: "Bio", icon: User }
+                { id: "gallery", label: "Photo Studio", icon: ImageIcon, disabled: !currentWedding && !showSelectionsOnly },
+                { id: "apk", label: "APK Converter", icon: Smartphone },
+                { id: "profile", label: "Profile Atelier", icon: User }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isActive = step === tab.id;
@@ -2548,27 +2520,157 @@ To compile easily, run the building script inside this directory:
                     key={tab.id}
                     disabled={tab.disabled}
                     onClick={() => {
-                        setStep(tab.id as Step);
-                        setAccentId((prev) => (prev + 1) % palettes.length);
+                      setStep(tab.id as Step);
+                      setAccentId((prev) => (prev + 1) % palettes.length);
                     }}
-                    className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all relative ${isActive ? 'text-white' : 'text-white/40'} ${tab.disabled ? 'cursor-not-allowed opacity-10' : 'hover:scale-110 active:scale-95'}`}
+                    className={`flex items-center gap-3.5 px-4 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all relative w-full text-left overflow-hidden ${
+                      isActive 
+                        ? 'text-stone-950 dark:text-white bg-white dark:bg-stone-900/60 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.2)] border border-stone-200/50 dark:border-white/5' 
+                        : tab.disabled 
+                          ? 'opacity-20 cursor-not-allowed text-stone-400 dark:text-stone-600' 
+                          : 'text-stone-400 dark:text-stone-500 hover:bg-stone-200/20 dark:hover:bg-stone-900/30 hover:text-stone-900 dark:hover:text-stone-100'
+                    }`}
                   >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-rose-400 dark:text-rose-500 animate-pulse' : ''}`} />
+                    <span className="flex-1 text-[9px] font-bold tracking-[0.2em]">{tab.label}</span>
                     {isActive && (
                       <motion.div 
-                        layoutId="nav-pill"
-                        className="absolute inset-0 accent-bg opacity-20 rounded-2xl -z-10 shadow-inner"
+                        layoutId="active-nav-dot"
+                        className="w-1.5 h-1.5 rounded-full bg-stone-900 dark:bg-rose-400" 
                       />
                     )}
-                    <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse accent-text' : ''}`} />
-                    <span className="text-[6px] font-bold uppercase tracking-[0.2em]">{tab.label}</span>
                   </button>
                 );
               })}
-            </div>
-          </nav>
-        )}
+            </nav>
+          </div>
 
-        <main className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 w-full relative ${isUiVisible ? 'pt-20 pb-28' : 'pt-0 pb-0'}`}>
+          {/* Luxury Footer of Sidebar */}
+          <div className="pt-6 border-t border-stone-200/50 dark:border-white/5 flex flex-col gap-4 text-left">
+            {user && (
+              <div 
+                onClick={() => setStep("profile")}
+                className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-stone-900/30 cursor-pointer transition-all border border-transparent hover:border-stone-200/30 dark:hover:border-white/5"
+              >
+                <img 
+                  src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} 
+                  className="w-9 h-9 rounded-full object-cover border border-stone-200/40 dark:border-white/10" 
+                  alt="Profile" 
+                />
+                <div className="overflow-hidden">
+                  <p className="text-[10px] font-bold text-stone-900 dark:text-white truncate tracking-wider uppercase">{user.displayName || "User"}</p>
+                  <p className="text-[8px] text-stone-400 dark:text-stone-500 truncate tracking-wide">{user.email || ""}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Luxury minimalist Theme Toggler */}
+            <button 
+              onClick={() => setIsDark(!isDark)}
+              className="flex items-center justify-between w-full px-4 py-3.5 rounded-xl bg-stone-200/30 dark:bg-stone-900/30 border border-stone-200/50 dark:border-white/5 text-stone-600 dark:text-stone-400 hover:bg-stone-200/60 dark:hover:bg-stone-900/60 transition-all text-[9px] uppercase tracking-[0.2em] font-bold"
+            >
+              <span className="flex items-center gap-2">
+                {isDark ? <Zap className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" /> : <Zap className="w-3.5 h-3.5" />}
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </span>
+              <span className="text-[7px] font-bold text-stone-400 tracking-widest">Atelier</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Right workspace area */}
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+          {/* Compact Dynamic Island Header (Mobile Only) */}
+          {isUiVisible && (
+            <nav className="absolute top-4 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm transition-all duration-700 md:hidden">
+              <div className="glass-morphism rounded-2xl px-4 py-2 flex items-center justify-between shadow-xl ring-1 ring-white/10 backdrop-blur-3xl overflow-hidden border border-white/10">
+                <div className="flex items-center gap-2">
+                  {step !== "welcome" && (
+                    <button 
+                      onClick={() => {
+                        if (step === "gallery") {
+                          setStep("weddings");
+                        } else if (step === "upload" || step === "weddings" || step === "profile" || step === "apk") {
+                          setStep("welcome");
+                        }
+                        setAccentId((prev) => (prev + 1) % palettes.length);
+                      }}
+                      className="w-7 h-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setStep("welcome"); setCurrentWedding(null); }}>
+                     <div className="w-7 h-7 rounded-lg bg-stone-900 dark:bg-white text-white dark:text-stone-900 flex items-center justify-center shadow-md group-hover:rotate-6 transition-transform">
+                        <Heart className="w-3.5 h-3.5 fill-current text-rose-400" />
+                     </div>
+                     <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-900 dark:text-white">E. Moments</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setIsDark(!isDark)}
+                    className="w-7 h-7 rounded-full bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-white/10 flex items-center justify-center text-stone-400"
+                  >
+                    {isDark ? <Zap className="w-3.5 h-3.5 text-yellow-500 animate-bounce" /> : <Zap className="w-3.5 h-3.5" />}
+                  </button>
+                  {user && (
+                    <div 
+                      onClick={() => setStep("profile")}
+                      className="w-7 h-7 rounded-full border border-stone-200 dark:border-white/10 overflow-hidden bg-stone-100 dark:bg-stone-900 cursor-pointer"
+                    >
+                       <img src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-full h-full object-cover" alt="Profile" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </nav>
+          )}
+
+          {/* Floating Premium Bottom Atelier Tab Bar (Mobile Only) */}
+          {isUiVisible && (
+            <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-2rem)] max-w-sm md:hidden">
+              <div 
+                className="glass-dark rounded-[2rem] p-2 flex items-center justify-around shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl border border-white/5"
+                style={{ fontWeight: "bold", fontFamily: "system-ui" }}
+              >
+                {[
+                  { id: beganExperience ? "dashboard" : "welcome", label: beganExperience ? "Home" : "Intro", icon: beganExperience ? Home : Sparkles },
+                  { id: "weddings", label: "Events", icon: LayoutGrid },
+                  { id: "calendar", label: "Calendar", icon: Calendar, disabled: !beganExperience },
+                  { id: "gallery", label: "Studio", icon: ImageIcon, disabled: !currentWedding && !showSelectionsOnly },
+                  { id: "apk", label: "APK", icon: Smartphone },
+                  { id: "profile", label: "Bio", icon: User }
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = step === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      disabled={tab.disabled}
+                      onClick={() => {
+                          setStep(tab.id as Step);
+                          setAccentId((prev) => (prev + 1) % palettes.length);
+                      }}
+                      className={`flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-2xl transition-all relative ${isActive ? 'text-white' : 'text-white/40'} ${tab.disabled ? 'cursor-not-allowed opacity-5' : 'hover:scale-110 active:scale-95'}`}
+                    >
+                      {isActive && (
+                        <motion.div 
+                          layoutId="nav-pill"
+                          className="absolute inset-0 accent-bg opacity-25 rounded-2xl -z-10 shadow-inner"
+                        />
+                      )}
+                      <Icon className={`w-4 h-4 ${isActive ? 'animate-pulse accent-text' : ''}`} />
+                      <span className="text-[6px] font-bold uppercase tracking-[0.25em]">{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          )}
+
+          <main className={`flex-1 overflow-y-auto custom-scrollbar transition-all duration-700 w-full relative ${isUiVisible ? 'pt-24 pb-28 md:pt-10 md:pb-10' : 'pt-0 pb-0'}`}>
           <AnimatePresence mode="wait">
           {step === "welcome" && (
             <motion.div
@@ -2576,164 +2678,201 @@ To compile easily, run the building script inside this directory:
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="relative min-h-screen flex flex-col items-center justify-start text-center space-y-24 py-20 pb-40 overflow-x-hidden"
+              className="w-full min-h-screen flex flex-col md:flex-row relative overflow-hidden bg-stone-50 dark:bg-stone-950"
             >
-              {/* Cinematic Background Elements */}
-              <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-screen bg-gradient-to-b from-stone-100/50 to-transparent dark:from-stone-900/50" />
-                <motion.div 
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    opacity: [0.1, 0.2, 0.1]
-                  }}
-                  transition={{ duration: 10, repeat: Infinity }}
-                  className="absolute top-[-10%] left-[-10%] w-[60%] aspect-square bg-indigo-200 dark:bg-indigo-950/30 rounded-full blur-[120px]" 
-                />
-                <motion.div 
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    opacity: [0.1, 0.15, 0.1]
-                  }}
-                  transition={{ duration: 8, repeat: Infinity, delay: 2 }}
-                  className="absolute bottom-[20%] right-[-5%] w-[50%] aspect-square bg-stone-200 dark:bg-stone-900/40 rounded-full blur-[100px]" 
-                />
+              {/* Desktop Left Column - Luxury Magazine Editorial Slide Showcase (45% Width) */}
+              <div className="hidden md:flex md:w-[45%] h-screen relative overflow-hidden bg-stone-950 border-r border-stone-200/20 dark:border-white/5 flex-col justify-between p-12 shrink-0">
+                {/* Ken-Burns rotating slide backgrounds */}
+                <div className="absolute inset-0 z-0">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSlide}
+                      initial={{ scale: 1.15, opacity: 0 }}
+                      animate={{ scale: 1.02, opacity: 0.65 }}
+                      exit={{ opacity: 0, scale: 1 }}
+                      transition={{ duration: 5.5, ease: "easeOut" }}
+                      className="absolute inset-0 w-full h-full bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${[
+                          "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1200",
+                          "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200",
+                          "https://images.unsplash.com/photo-1519225495810-7512c696505a?auto=format&fit=crop&q=80&w=1200",
+                          "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=1200"
+                        ][activeSlide]})`
+                      }}
+                    />
+                  </AnimatePresence>
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-stone-950/20 z-10" />
+                </div>
+
+                {/* Left Column Header (Atelier Badge) */}
+                <div className="relative z-20 flex justify-between items-center text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-bold tracking-[0.4em] uppercase opacity-75">Curated Archive</span>
+                    <div className="w-1 h-1 rounded-full bg-rose-400" />
+                  </div>
+                  <span className="font-mono text-[9px] tracking-widest opacity-40">EDITION 2026</span>
+                </div>
+
+                {/* Left Column Atmospheric quotes and stats */}
+                <div className="relative z-20 text-left space-y-6 max-w-sm text-white">
+                  <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-rose-300">EST. MOMENTS</span>
+                  <p className="text-3xl font-serif italic leading-relaxed text-stone-100">
+                    "Every glance, every laughter, preserved in the sacred geometry of your story."
+                  </p>
+                  <div className="flex items-center gap-4 pt-4">
+                    <div className="h-[1px] w-12 bg-white/20" />
+                    <span className="font-serif italic text-xs text-stone-400">Atelier of Memories</span>
+                  </div>
+                </div>
+
+                {/* Left Column Footnotes */}
+                <div className="relative z-20 flex justify-between items-end text-white/50 text-[8px] tracking-widest font-mono">
+                  <p>MOMENT MATRIX v3.0</p>
+                  <p>© 2026 PREMIER STUDIO</p>
+                </div>
               </div>
 
-              {/* Hero Section */}
-              <div className="space-y-12 max-w-6xl mx-auto px-6 relative z-10 pt-20">
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="inline-flex items-center gap-4 px-8 py-4 rounded-full glass-morphism border border-white/40 shadow-2xl text-stone-900 dark:text-white text-[10px] font-bold uppercase tracking-[0.5em]"
-                >
-                  <Sparkles className="w-4 h-4 accent-text animate-pulse" />
-                  E. Moments v3.0
-                </motion.div>
-                
-                <div className="space-y-4">
-                  <h1 className="text-[10vw] lg:text-[7rem] font-serif italic text-stone-900 dark:text-white leading-[0.8] tracking-tight">
-                    Pure <br />
-                    <span className="text-stone-300 dark:text-stone-700/50">Eternal</span>
-                  </h1>
+              {/* Welcome Form Console (Desktop 55% Width / Mobile Full Width) */}
+              <div className="flex-1 min-h-screen flex flex-col justify-between p-6 md:p-16 lg:p-24 relative z-10 overflow-y-auto">
+                {/* Floating lights inside the form area */}
+                <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
                   <motion.div 
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ duration: 1.5, ease: "circOut" }}
-                    className="h-[1px] w-24 accent-bg mx-auto opacity-40"
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.08, 0.15, 0.08] }}
+                    transition={{ duration: 12, repeat: Infinity }}
+                    className="absolute top-10 right-10 w-96 h-96 bg-rose-200/30 dark:bg-rose-950/10 rounded-full blur-[100px]"
+                  />
+                  <motion.div 
+                    animate={{ scale: [1.1, 0.9, 1.1], opacity: [0.05, 0.12, 0.05] }}
+                    transition={{ duration: 10, repeat: Infinity, delay: 2 }}
+                    className="absolute bottom-10 left-10 w-[30rem] h-[30rem] bg-indigo-200/20 dark:bg-indigo-950/10 rounded-full blur-[120px]"
                   />
                 </div>
-                
-                <p className="text-xl md:text-3xl text-stone-500 dark:text-stone-400 leading-relaxed max-w-2xl mx-auto font-serif italic">
-                  "Beyond mere pixels, we curate the emotional atmosphere of your most sacred exchanges."
-                </p>
 
-              <div className="flex flex-col items-center justify-center gap-4">
-                <button 
-                  onClick={user ? () => setStep("profile") : signInWithGoogle}
-                  className="group relative w-full max-w-xs py-5 rounded-2xl accent-bg text-white font-bold text-[10px] uppercase tracking-[0.3em] shadow-xl overflow-hidden hover:scale-105 active:scale-95 transition-all"
-                >
-                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <span className="relative flex items-center justify-center gap-3 text-[11px]">
-                    {user ? "View My Archive" : "Begin Experience"}
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </button>
-                
-                <div className="flex items-center gap-3 w-full max-w-xs">
-                  <button 
-                    onClick={() => setShowJoinModal(true)}
-                    className="flex-1 py-5 rounded-2xl glass-morphism border border-stone-200 dark:border-white/10 text-stone-900 dark:text-white font-bold text-[9px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 hover:translate-y-[-2px] transition-all"
-                  >
-                    Enter Code
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setCameraInitialMode("qr");
-                      setShowCamera(true);
-                    }}
-                    className="p-5 rounded-2xl accent-bg text-white flex items-center justify-center hover:scale-110 transition-all shadow-xl accent-ring ring-2 ring-opacity-20"
-                  >
-                    <QrCode className="w-4 h-4" />
-                  </button>
+                {/* Top Atelier Bar */}
+                <div className="flex justify-between items-center">
+                  <div className="inline-flex items-center gap-2.5 px-4.5 py-2 rounded-full bg-white dark:bg-stone-900 border border-stone-200/40 dark:border-white/5 shadow-sm text-stone-900 dark:text-white text-[9px] font-bold uppercase tracking-[0.3em]">
+                    <Sparkles className="w-3.5 h-3.5 text-rose-400 dark:text-rose-500 animate-pulse" />
+                    E. Moments Premium
+                  </div>
+                  
+                  {/* Small Profile indicator on top-right (if logged in) */}
+                  {user && (
+                    <div 
+                      onClick={() => setStep("profile")}
+                      className="flex items-center gap-2.5 bg-white dark:bg-stone-900 px-3.5 py-1.5 rounded-full border border-stone-200/40 dark:border-white/5 cursor-pointer shadow-sm md:hidden"
+                    >
+                      <img src={user.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=300"} className="w-5 h-5 rounded-full object-cover" alt="Profile" />
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">Bio</span>
+                    </div>
+                  )}
                 </div>
 
-                <button 
-                  onClick={() => setStep("apk")}
-                  className="w-full max-w-xs py-4 px-6 rounded-2xl bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 dark:border-indigo-500/30 text-[9px] font-bold uppercase tracking-[0.25em] flex items-center justify-center gap-2.5 hover:translate-y-[-1px] active:scale-95 transition-all cursor-pointer shadow-sm hover:shadow-md"
-                >
-                  <Smartphone className="w-4 h-4 text-indigo-500 animate-pulse" />
-                  Website To APK Converter
-                </button>
-              </div>
-              </div>
+                {/* Central Editorial Headers */}
+                <div className="my-auto max-w-xl mx-auto md:mx-0 text-left space-y-12 py-10">
+                  <div className="space-y-4">
+                    <span className="text-[10px] font-bold tracking-[0.4em] uppercase text-stone-400 dark:text-stone-500">MOMENT ARCHIVE</span>
+                    <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif text-stone-900 dark:text-white leading-[1.05] tracking-tight">
+                      Capturing <br />
+                      <span className="italic font-normal text-rose-400/90 dark:text-rose-400">Pure Eternal</span>
+                    </h1>
+                    <div className="h-[1px] w-20 bg-stone-900/10 dark:bg-white/10 mt-6" />
+                  </div>
 
-              {/* Featured Marquee Section */}
-              <div className="w-full py-10 space-y-10">
-                <div className="flex items-center gap-6 px-10">
-                  <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-stone-200 dark:to-white/10" />
-                  <p className="text-[10px] font-bold uppercase tracking-[0.5em] text-stone-400 whitespace-nowrap">Atmospheric Extractions</p>
-                  <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-stone-200 dark:to-white/10" />
+                  <p className="text-base md:text-lg text-stone-500 dark:text-stone-400 leading-relaxed font-serif italic">
+                    "Beyond mere pixels, we curate the emotional atmosphere of your most sacred exchanges, creating an exquisite private legacy."
+                  </p>
+
+                  {/* Primary interactive controls */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4.5 pt-4">
+                    <button 
+                      onClick={user ? () => setStep("profile") : signInWithGoogle}
+                      className="group relative px-8 py-5 rounded-xl bg-stone-900 dark:bg-white text-white dark:text-stone-950 font-bold text-[10px] uppercase tracking-[0.3em] shadow-xl overflow-hidden hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3.5"
+                    >
+                      <div className="absolute inset-0 bg-stone-800 dark:bg-stone-100 opacity-0 group-hover:opacity-10 transition-opacity" />
+                      <span>{user ? "View Atelier Archive" : "Begin Experience"}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                    </button>
+                    
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => setShowJoinModal(true)}
+                        className="flex-1 px-8 py-5 rounded-xl bg-white dark:bg-stone-900 border border-stone-200/40 dark:border-white/5 text-stone-900 dark:text-white font-bold text-[9px] uppercase tracking-[0.3em] flex items-center justify-center gap-2 hover:bg-stone-50 dark:hover:bg-stone-850 hover:translate-y-[-1px] transition-all shadow-sm"
+                      >
+                        Enter Code
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setCameraInitialMode("qr");
+                          setShowCamera(true);
+                        }}
+                        className="p-5 rounded-xl bg-stone-100 dark:bg-stone-900 border border-stone-200/40 dark:border-white/5 text-stone-900 dark:text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm hover:bg-stone-200/50 dark:hover:bg-stone-800"
+                        title="Scan Guest QR"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* App Converter Link */}
+                  <div className="pt-2 text-left">
+                    <button 
+                      onClick={() => setStep("apk")}
+                      className="inline-flex items-center gap-3 py-3.5 px-5.5 rounded-xl bg-stone-200/30 dark:bg-white/5 hover:bg-stone-200/50 dark:hover:bg-white/10 text-stone-700 dark:text-stone-300 border border-stone-200/40 dark:border-white/5 text-[9px] font-bold uppercase tracking-[0.25em] transition-all cursor-pointer shadow-sm"
+                    >
+                      <Smartphone className="w-4 h-4 text-rose-400" />
+                      Atelier App Converter
+                    </button>
+                  </div>
                 </div>
 
-                <div className="relative overflow-hidden group">
-                  <motion.div 
-                    animate={{ x: [0, -2000] }}
-                    transition={{ duration: 80, repeat: Infinity, ease: "linear" }}
-                    className="flex gap-10 whitespace-nowrap w-max px-6"
-                  >
-                    {[...Array(12)].map((_, i) => (
-                      <div key={i} className="w-[45vw] md:w-[35vw] aspect-[3/4] ios-squircle overflow-hidden bg-stone-200 dark:bg-white/5 border border-white/10 shadow-2xl relative group/card">
-                        <img 
-                          src={`https://images.unsplash.com/photo-${1519741497674 + i*200}?auto=format&fit=crop&q=80&w=800`} 
-                          className="w-full h-full object-cover grayscale group-hover/card:grayscale-0 transition-all duration-1000 scale-110 group-hover/card:scale-100" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity p-8 flex flex-col justify-end">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/60 mb-2">Photo Captured</p>
-                          <h4 className="text-xl font-serif italic text-white line-clamp-1">Moment Ref: {1000 + i}</h4>
+                {/* Mobile Extractions Marquee */}
+                <div className="block md:hidden w-full py-6 space-y-6 border-t border-stone-200/40 dark:border-white/5 mt-12">
+                  <p className="text-[8px] font-bold uppercase tracking-[0.4em] text-stone-400 text-left">Atmospheric Moments</p>
+                  <div className="relative overflow-hidden w-full">
+                    <motion.div 
+                      animate={{ x: [0, -1000] }}
+                      transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                      className="flex gap-4.5 whitespace-nowrap w-max"
+                    >
+                      {[...Array(6)].map((_, i) => (
+                        <div key={i} className="w-[32vw] aspect-[3/4] rounded-xl overflow-hidden bg-stone-200 dark:bg-white/5 border border-stone-200/20 dark:border-white/5 shadow-md relative">
+                          <img 
+                            src={`https://images.unsplash.com/photo-${1519741497674 + i*200}?auto=format&fit=crop&q=80&w=400`} 
+                            className="w-full h-full object-cover scale-110" 
+                          />
                         </div>
-                      </div>
-                    ))}
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Philosophy Section */}
-              <div className="max-w-7xl mx-auto px-10 grid grid-cols-1 md:grid-cols-3 gap-10 pt-20">
-                <div className="p-12 rounded-[3.5rem] glass-morphism border border-white/40 space-y-6 text-left group">
-                  <div className="w-14 h-14 rounded-2xl accent-bg text-white opacity-80 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Zap className="w-6 h-6" />
+                      ))}
+                    </motion.div>
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-widest text-stone-900 dark:text-white">Instant <br />Recall</h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400 font-medium leading-relaxed italic">"Experience your memories in real-time, beautifully organized for you."</p>
                 </div>
 
-                <div className="p-12 rounded-[3.5rem] bg-stone-900 dark:bg-white text-white dark:text-stone-900 space-y-6 text-left group shadow-2xl">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 dark:bg-stone-900/10 flex items-center justify-center text-white dark:text-stone-900 group-hover:rotate-12 transition-transform">
-                    <Heart className="w-6 h-6" />
+                {/* Desktop Extractions Marquee */}
+                <div className="hidden md:block w-full pt-10 border-t border-stone-200/40 dark:border-white/5">
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-stone-400">ATMOSPHERIC EXHIBITIONS</p>
+                    <span className="text-[8px] font-mono opacity-40">GALLERY SLIDES</span>
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-widest">Aesthetic <br />Purity</h3>
-                  <p className="text-sm opacity-60 font-medium leading-relaxed italic">"Every pixel is treated as a piece of history. We maintain the sacred geometry of your day."</p>
-                </div>
-
-                <div className="p-12 rounded-[3.5rem] glass-morphism border border-white/40 space-y-6 text-left group">
-                  <div className="w-14 h-14 rounded-2xl bg-stone-100 dark:bg-white/10 flex items-center justify-center text-stone-400 group-hover:translate-y-[-5px] transition-transform">
-                    <Globe className="w-6 h-6" />
+                  <div className="relative overflow-hidden w-full rounded-2xl">
+                    <motion.div 
+                      animate={{ x: [0, -1200] }}
+                      transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
+                      className="flex gap-6 whitespace-nowrap w-max"
+                    >
+                      {[...Array(8)].map((_, i) => (
+                        <div key={i} className="w-56 aspect-[3/4] rounded-2xl overflow-hidden bg-stone-200 dark:bg-white/5 border border-stone-200/20 dark:border-white/5 shadow-md relative group/marq cursor-pointer">
+                          <img 
+                            src={`https://images.unsplash.com/photo-${1519741497674 + i*200}?auto=format&fit=crop&q=80&w=500`} 
+                            className="w-full h-full object-cover grayscale group-hover/marq:grayscale-0 transition-all duration-700 scale-105 group-hover/marq:scale-100" 
+                          />
+                          <div className="absolute inset-0 bg-stone-950/40 opacity-0 group-hover/marq:opacity-100 transition-opacity flex items-end p-4">
+                            <span className="text-[8px] text-white font-mono tracking-widest uppercase">MOMENT REF {1000 + i}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </motion.div>
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-widest">Global <br />Sync</h3>
-                  <p className="text-sm text-stone-500 dark:text-stone-400 font-medium leading-relaxed italic">"A private gallery accessible from anywhere in the world."</p>
-                </div>
-              </div>
-
-              {/* Scroll Indicator */}
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-20 pointer-events-none hidden md:flex">
-                <p className="text-[8px] font-bold uppercase tracking-[0.6em] text-stone-500">Immerse</p>
-                <div className="w-[1px] h-20 bg-stone-300 relative overflow-hidden">
-                  <motion.div 
-                    animate={{ y: [0, 80] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute top-0 left-0 w-full h-[30%] bg-stone-900 dark:bg-white"
-                  />
                 </div>
               </div>
             </motion.div>
@@ -5641,7 +5780,8 @@ To compile easily, run the building script inside this directory:
           )}
         </AnimatePresence>
       </main>
-      </div>
+      </div> {/* Closing right workspace area */}
+      </div> {/* Closing responsive wrapper */}
 
 
 
